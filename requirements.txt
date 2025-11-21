@@ -1,5 +1,6 @@
 requests
 Pillow
+python-dotenv
 RPi.GPIO
 spidev
 pytest

@@ -26,27 +26,85 @@ def get_weather():
 
 
 def get_github_commits():
-    if not Config.GITHUB_USERNAME:
+    """使用 GraphQL API 获取今天的提交数"""
+    if not Config.GITHUB_USERNAME or not Config.GITHUB_TOKEN:
+        logger.warning("GitHub username or token not configured")
         return 0
 
-    url = f"https://api.github.com/users/{Config.GITHUB_USERNAME}/events"
-    headers = {}
-    if Config.GITHUB_TOKEN:
-        headers["Authorization"] = f"token {Config.GITHUB_TOKEN}"
+    # GraphQL API endpoint
+    url = "https://api.github.com/graphql"
+    headers = {
+        "Authorization": f"Bearer {Config.GITHUB_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    # 获取今天的日期范围（UTC时间）
+    now = datetime.datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start_iso = today_start.isoformat() + "Z"
+
+    # GraphQL 查询
+    query = """
+    query($username: String!, $from: DateTime!) {
+      user(login: $username) {
+        contributionsCollection(from: $from) {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                contributionCount
+                date
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    variables = {
+        "username": Config.GITHUB_USERNAME,
+        "from": today_start_iso
+    }
 
     try:
-        res = requests.get(url, headers=headers, timeout=10)
+        res = requests.post(
+            url,
+            json={"query": query, "variables": variables},
+            headers=headers,
+            timeout=10
+        )
         res.raise_for_status()
-        events = res.json()
+        data = res.json()
 
-        today = datetime.datetime.now().strftime("%Y-%m-%d")
-        count = 0
-        for e in events:
-            if e.get("type") == "PushEvent" and e.get("created_at", "").startswith(
-                today
-            ):
-                count += e.get("payload", {}).get("size", 1)
-        return count
+        # 检查是否有错误
+        if "errors" in data:
+            logger.error(f"GitHub GraphQL Error: {data['errors']}")
+            return 0
+
+        # 获取今天的日期字符串
+        today_date = now.strftime("%Y-%m-%d")
+
+        # 从响应中提取今天的提交数
+        contribution_days = (
+            data.get("data", {})
+            .get("user", {})
+            .get("contributionsCollection", {})
+            .get("contributionCalendar", {})
+            .get("weeks", [])
+        )
+
+        # 遍历所有天，找到今天的提交数
+        for week in contribution_days:
+            for day in week.get("contributionDays", []):
+                if day.get("date") == today_date:
+                    count = day.get("contributionCount", 0)
+                    logger.info(f"GitHub commits today: {count}")
+                    return count
+
+        logger.info("No commits found for today")
+        return 0
+
     except Exception as e:
         logger.error(f"GitHub API Error: {e}")
         return 0

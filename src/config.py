@@ -1,5 +1,17 @@
 import os
 
+# 获取项目根目录（模块级别）
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 加载 .env 文件中的环境变量
+try:
+    from dotenv import load_dotenv
+    dotenv_path = os.path.join(BASE_DIR, '.env')
+    load_dotenv(dotenv_path)
+except ImportError:
+    # 如果没有安装 python-dotenv，跳过
+    pass
+
 
 class Config:
     # 基础配置
@@ -20,7 +32,6 @@ class Config:
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
     # 路径配置
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     FONT_PATH = os.path.join(BASE_DIR, "resources", "Font.ttc")
 
     # 列表内容 (也可以扩展为从 json 加载)
