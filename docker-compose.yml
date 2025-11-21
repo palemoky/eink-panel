@@ -1,0 +1,17 @@
+version: "3"
+services:
+  epaper-dash:
+    build: .
+    container_name: epaper_dashboard
+    privileged: true # 必须，为了访问 GPIO
+    devices:
+      - /dev/spidev0.0:/dev/spidev0.0 # SPI 接口
+      - /dev/gpiomem:/dev/gpiomem
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./.env:/app/.env:ro  # 只读挂载 .env
+      - ./data_cache.json:/app/data_cache.json # 持久化缓存
+      - ./screenshot.bmp:/app/screenshot.bmp # 查看截图
+    restart: unless-stopped
+

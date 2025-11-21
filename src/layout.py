@@ -3,7 +3,6 @@ from PIL import Image, ImageDraw
 import datetime
 from .config import Config
 from .renderer import Renderer
-import src.providers as providers
 
 
 class DashboardLayout:
@@ -39,21 +38,22 @@ class DashboardLayout:
         self.WEATHER_ICON_OFFSET_X = -35  # 图标相对中心点的X偏移
         self.WEATHER_ICON_SIZE = 20       # 图标尺寸
 
-    def create_image(self, width, height):
+    def create_image(self, width, height, data):
         """
         主入口：生成完整的仪表盘图片
+        :param data: 包含所有显示数据的字典
         """
         # 1. 创建画布
         image = Image.new("1", (width, height), 255)
         draw = ImageDraw.Draw(image)
 
-        # 2. 获取所有数据 (串行获取，可能会有网络延迟，生产环境可考虑异步)
+        # 2. 提取数据
         now = datetime.datetime.now()
-        weather = providers.get_weather()
-        commits = providers.get_github_commits()
-        vps_data = providers.get_vps_info()
-        btc_data = providers.get_btc_data()
-        week_prog = providers.get_week_progress()
+        weather = data.get("weather", {})
+        commits = data.get("github_commits", 0)
+        vps_data = data.get("vps_usage", 0)
+        btc_data = data.get("btc_price", {})
+        week_prog = data.get("week_progress", 0)
 
         # 3. 绘制三大区域
         self._draw_header(draw, width, now, weather)

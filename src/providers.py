@@ -6,7 +6,7 @@ from .config import Config
 
 logger = logging.getLogger(__name__)
 
-# 定义通用的重试策略：遇到网络错误重试3次，每次间隔2秒
+# 定义通用的重试策略
 retry_strategy = retry(
     stop=stop_after_attempt(3),
     wait=wait_fixed(2),
@@ -15,7 +15,7 @@ retry_strategy = retry(
 )
 
 @retry_strategy
-def get_weather():
+async def get_weather(client: httpx.AsyncClient):
     if not Config.OPENWEATHER_API_KEY:
         return {"temp": "13.9", "desc": "Sunny", "icon": "Clear"}
 
@@ -27,7 +27,7 @@ def get_weather():
     }
     
     try:
-        res = httpx.get(url, params=params, timeout=10)
+        res = await client.get(url, params=params, timeout=10)
         res.raise_for_status()
         data = res.json()
         return {
@@ -37,12 +37,11 @@ def get_weather():
         }
     except Exception as e:
         logger.error(f"Weather API Error: {e}")
-        # 如果重试耗尽，返回错误状态
         raise e if isinstance(e, (httpx.RequestError, httpx.HTTPStatusError)) else e
 
 
 @retry_strategy
-def get_github_commits():
+async def get_github_commits(client: httpx.AsyncClient):
     """使用 GraphQL API 获取今天的提交数（考虑配置的时区）"""
     if not Config.GITHUB_USERNAME or not Config.GITHUB_TOKEN:
         logger.warning("GitHub username or token not configured")
@@ -54,14 +53,8 @@ def get_github_commits():
         "Content-Type": "application/json"
     }
 
-    # 使用 pendulum 处理时间
-    # 1. 获取当前 UTC 时间并应用偏移量得到目标时区时间
     now_target = pendulum.now('UTC').add(hours=Config.GITHUB_TIMEZONE_OFFSET)
-    
-    # 2. 获取目标时区当天的起始时间 (00:00:00)
     today_start_target = now_target.start_of('day')
-    
-    # 3. 转换回 UTC 时间用于 API 查询
     today_start_utc = today_start_target.subtract(hours=Config.GITHUB_TIMEZONE_OFFSET)
     today_start_iso = today_start_utc.to_iso8601_string()
 
@@ -84,7 +77,7 @@ def get_github_commits():
     }
 
     try:
-        res = httpx.post(
+        res = await client.post(
             url,
             json={"query": query, "variables": variables},
             headers=headers,
@@ -106,7 +99,7 @@ def get_github_commits():
         
         total = commits + issues + prs + reviews
         
-        logger.info(f"GitHub contributions today (since {today_start_target} UTC+{Config.GITHUB_TIMEZONE_OFFSET} / {today_start_iso} UTC): {total}")
+        logger.info(f"GitHub contributions today: {total}")
         return total
 
     except Exception as e:
@@ -115,7 +108,7 @@ def get_github_commits():
 
 
 @retry_strategy
-def get_vps_info():
+async def get_vps_info(client: httpx.AsyncClient):
     if not Config.VPS_API_KEY:
         return 0
     
@@ -126,7 +119,7 @@ def get_vps_info():
     }
     
     try:
-        res = httpx.get(url, params=params, timeout=10)
+        res = await client.get(url, params=params, timeout=10)
         data = res.json()
         if data.get("error") != 0:
             return 0
@@ -137,7 +130,7 @@ def get_vps_info():
 
 
 @retry_strategy
-def get_btc_data():
+async def get_btc_data(client: httpx.AsyncClient):
     url = "https://api.coingecko.com/api/v3/simple/price"
     params = {
         "ids": "bitcoin",
@@ -146,7 +139,7 @@ def get_btc_data():
     }
     
     try:
-        res = httpx.get(url, params=params, timeout=10)
+        res = await client.get(url, params=params, timeout=10)
         if res.status_code == 200:
             return res.json().get("bitcoin", {"usd": 0, "usd_24h_change": 0})
     except Exception as e:
@@ -157,9 +150,9 @@ def get_btc_data():
 
 
 def get_week_progress():
-    """使用 pendulum 计算本周进度"""
+    """使用 pendulum 计算本周进度 (无需异步)"""
     now = pendulum.now()
-    start_of_week = now.start_of('week') # 默认为周一
+    start_of_week = now.start_of('week')
     end_of_week = now.end_of('week')
     
     total_seconds = (end_of_week - start_of_week).total_seconds()
