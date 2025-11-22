@@ -50,6 +50,10 @@ COPY --from=downloader /tmp/e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_
 # 复制 __init__.py 确保它是包
 COPY --from=downloader /tmp/e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd/__init__.py src/lib/waveshare_epd/
 
+# 复制字体 (确保 resources 目录存在)
+RUN mkdir -p resources
+COPY --from=downloader /tmp/e-Paper/RaspberryPi_JetsonNano/python/pic/Font.ttc resources/
+
 # 设置权限
 RUN chown -R appuser:appuser /app
 
