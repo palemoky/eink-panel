@@ -112,11 +112,11 @@ jobs:
           provenance: false
           sbom: false
 
-  # 同步 README 到 Docker Hub (仅在 push 到 main 时)
+  # 同步 README 到 Docker Hub (在镜像构建成功后)
   sync-readme:
     runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
