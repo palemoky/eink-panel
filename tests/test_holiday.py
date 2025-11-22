@@ -9,8 +9,8 @@ def test_holiday_birthday(monkeypatch):
     monkeypatch.setattr(Config, "USER_NAME", "TestUser")
     
     # Mock time to birthday
-    now = pendulum.datetime(2025, 11, 22)
-    monkeypatch.setattr(pendulum, "now", lambda: now)
+    now = pendulum.datetime(2025, 11, 22, tz='Asia/Shanghai')
+    monkeypatch.setattr(pendulum, "now", lambda tz=None: now)
     
     hm = HolidayManager()
     holiday = hm.get_holiday()
@@ -21,8 +21,8 @@ def test_holiday_birthday(monkeypatch):
 
 def test_holiday_lunar_new_year(monkeypatch):
     # 2025年1月29日是春节 (农历正月初一)
-    now = pendulum.datetime(2025, 1, 29)
-    monkeypatch.setattr(pendulum, "now", lambda: now)
+    now = pendulum.datetime(2025, 1, 29, tz='Asia/Shanghai')
+    monkeypatch.setattr(pendulum, "now", lambda tz=None: now)
     
     hm = HolidayManager()
     holiday = hm.get_holiday()
@@ -32,8 +32,8 @@ def test_holiday_lunar_new_year(monkeypatch):
 
 def test_no_holiday(monkeypatch):
     # 普通的一天
-    now = pendulum.datetime(2025, 6, 1)
-    monkeypatch.setattr(pendulum, "now", lambda: now)
+    now = pendulum.datetime(2025, 6, 1, tz='Asia/Shanghai')
+    monkeypatch.setattr(pendulum, "now", lambda tz=None: now)
     
     hm = HolidayManager()
     holiday = hm.get_holiday()
