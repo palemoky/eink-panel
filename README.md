@@ -1,7 +1,7 @@
 # E-Ink Dashboard
 
-[![Docker Hub](https://img.shields.io/docker/v/palemoky/eInk-Panel?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/palemoky/eink-panel)
-[![Docker Image Size](https://img.shields.io/docker/image-size/palemoky/eInk-Panel/latest)](https://hub.docker.com/r/palemoky/eink-panel)
+[![Docker Hub](https://img.shields.io/docker/v/palemoky/eink-panel?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/palemoky/eink-panel)
+[![Docker Image Size](https://img.shields.io/docker/image-size/palemoky/eink-panel/latest)](https://hub.docker.com/r/palemoky/eink-panel)
 [![GitHub](https://img.shields.io/github/license/palemoky/eInk-Panel)](https://github.com/palemoky/eInk-Panel)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/palemoky/eInk-Panel/docker-build.yml?branch=main)](https://github.com/palemoky/eInk-Panel/actions)
 
