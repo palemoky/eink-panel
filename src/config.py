@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     QUIET_START_HOUR: int = 1
     QUIET_END_HOUR: int = 6
 
-    # GitHub 统计时区偏移（小时），默认为 8 (UTC+8)
-    GITHUB_TIMEZONE_OFFSET: int = 8
+    # 时区配置 (使用 IANA 时区名称，如 'Asia/Shanghai', 'America/New_York', 'Europe/London')
+    TIMEZONE: str = "Asia/Shanghai"
 
     # 个性化配置
     USER_NAME: str = "Palemoky"

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def is_in_quiet_hours():
     """检查当前时间是否在静默时间段内，并返回需要休眠的秒数"""
-    now = pendulum.now()
+    now = pendulum.now(Config.TIMEZONE)
     
     # 构建今天的开始和结束时间点
     start_time = now.replace(hour=Config.QUIET_START_HOUR, minute=0, second=0, microsecond=0)
@@ -66,7 +66,7 @@ async def main():
             epd.sleep()
 
             while True:
-                now = pendulum.now()
+                now = pendulum.now(Config.TIMEZONE)
                 current_time = now.to_time_string()
                 
                 # 检查是否在静默时间段

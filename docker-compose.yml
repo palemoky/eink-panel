@@ -8,7 +8,7 @@ services:
       - /dev/spidev0.0:/dev/spidev0.0 # SPI 接口
       - /dev/gpiomem:/dev/gpiomem
     environment:
-      - TZ=Asia/Shanghai
+      - TZ=${TIMEZONE:-Asia/Shanghai}
     volumes:
       - ./.env:/app/.env:ro  # 只读挂载 .env
       - ./data_cache.json:/app/data_cache.json # 持久化缓存

@@ -53,9 +53,11 @@ async def get_github_commits(client: httpx.AsyncClient):
         "Content-Type": "application/json"
     }
 
-    now_target = pendulum.now('UTC').add(hours=Config.GITHUB_TIMEZONE_OFFSET)
-    today_start_target = now_target.start_of('day')
-    today_start_utc = today_start_target.subtract(hours=Config.GITHUB_TIMEZONE_OFFSET)
+    # 获取配置时区的当前时间和今天开始时间
+    now_local = pendulum.now(Config.TIMEZONE)
+    today_start_local = now_local.start_of('day')
+    # 转换为 UTC 时间用于 GitHub API
+    today_start_utc = today_start_local.in_timezone('UTC')
     today_start_iso = today_start_utc.to_iso8601_string()
 
     query = """
@@ -151,7 +153,7 @@ async def get_btc_data(client: httpx.AsyncClient):
 
 def get_week_progress():
     """使用 pendulum 计算本周进度 (无需异步)"""
-    now = pendulum.now()
+    now = pendulum.now(Config.TIMEZONE)
     start_of_week = now.start_of('week')
     end_of_week = now.end_of('week')
     
