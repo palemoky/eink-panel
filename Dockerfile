@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libjpeg62-turbo \
     libopenjp2-7 \
     libtiff6 \
-    libgpiod2 \
+    gpiod \
     && rm -rf /var/lib/apt/lists/*
 
 # 从 Builder 阶段复制安装好的包
