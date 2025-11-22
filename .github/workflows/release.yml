@@ -1,12 +1,9 @@
-name: Build and Push Docker Image
+name: Release
 
 on:
   push:
-    branches: [ "main" ]
     tags: [ "v*.*.*" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch: 
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: eink-panel
@@ -16,8 +13,6 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # push main 或 PR 时运行测试，但排除 tag 推送（tag 会触发完整流程）
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,8 +34,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: test
-    # 只在推送 tag 时构建镜像
-    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
       packages: write
@@ -118,7 +111,6 @@ jobs:
   sync-readme:
     runs-on: ubuntu-latest
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
