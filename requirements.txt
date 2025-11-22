@@ -7,3 +7,4 @@ Pillow
 RPi.GPIO
 spidev
 pytest
+pytest-asyncio
