@@ -49,3 +49,4 @@ htmlcov/
 *.png
 *.jpg
 *.jpeg
+data/
