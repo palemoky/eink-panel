@@ -50,8 +50,6 @@ RUN useradd -m appuser
 
 # 复制源代码
 COPY src src/
-# 确保 __init__.py 存在 (解决 ModuleNotFoundError) 并列出文件用于调试
-RUN touch src/__init__.py && ls -la src/
 COPY requirements.txt .
 COPY .env.example .
 
@@ -77,4 +75,4 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # 启动命令
-CMD ["python", "-m", "src.main"]
+CMD ["python", "src/main.py"]
