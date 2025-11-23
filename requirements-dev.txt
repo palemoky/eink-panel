@@ -1,5 +1,5 @@
 # Development dependencies
-black==24.1.1
+black==24.3.0
 isort==5.13.2
 ruff==0.1.15
 mypy==1.8.0

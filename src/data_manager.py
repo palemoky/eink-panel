@@ -16,6 +16,15 @@ class DataManager:
         self.cache_file = Config.DATA_DIR / "cache.json"
         self.client = None
 
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器退出"""
+        # 不需要清理资源，因为我们使用的是临时 client
+        return False
+
     def load_cache(self):
         """从缓存文件加载数据"""
         if not self.cache_file.exists():
