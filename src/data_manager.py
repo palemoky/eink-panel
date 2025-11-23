@@ -67,6 +67,15 @@ class DataManager:
             # 检查是否年终
             is_year_end, github_year_summary = providers.check_year_end_summary()
 
+            # 获取 TODO 列表
+            from . import todo_providers
+
+            try:
+                goals, must, optional = await todo_providers.get_todo_lists()
+            except Exception as e:
+                logger.error(f"Failed to fetch TODO lists: {e}")
+                goals, must, optional = todo_providers.get_todo_from_config()
+
             return {
                 "weather": weather,
                 "github_commits": commits,
@@ -75,6 +84,9 @@ class DataManager:
                 "week_progress": week_progress,
                 "is_year_end": is_year_end,
                 "github_year_summary": github_year_summary,
+                "todo_goals": goals,
+                "todo_must": must,
+                "todo_optional": optional,
             }
 
     def _get_with_cache_fallback(self, task, key, default):

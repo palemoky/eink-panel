@@ -72,6 +72,11 @@ class DashboardLayout:
         btc_data = data.get("btc_price", {})
         week_prog = data.get("week_progress", 0)
 
+        # 提取 TODO 列表（如果有的话）
+        self._current_goals = data.get("todo_goals", Config.LIST_GOALS)
+        self._current_must = data.get("todo_must", Config.LIST_MUST)
+        self._current_optional = data.get("todo_optional", Config.LIST_OPTIONAL)
+
         # 3. 绘制三大区域
         self._draw_header(draw, width, now, weather)
         self._draw_lists(draw)
@@ -246,10 +251,17 @@ class DashboardLayout:
             self.COLS[2]["max_w"],
         )
 
+        # 从 data 中获取 TODO 列表（而不是直接从 Config）
+        # 这些数据应该在 create_image 中传入
+        # 为了向后兼容，如果没有传入则使用 Config
+        goals = getattr(self, "_current_goals", Config.LIST_GOALS)
+        must = getattr(self, "_current_must", Config.LIST_MUST)
+        optional = getattr(self, "_current_optional", Config.LIST_OPTIONAL)
+
         # 处理数据：行数截断
-        safe_goals = self._limit_list_items(Config.LIST_GOALS, self.MAX_LIST_LINES)
-        safe_must = self._limit_list_items(Config.LIST_MUST, self.MAX_LIST_LINES)
-        safe_optional = self._limit_list_items(Config.LIST_OPTIONAL, self.MAX_LIST_LINES)
+        safe_goals = self._limit_list_items(goals, self.MAX_LIST_LINES)
+        safe_must = self._limit_list_items(must, self.MAX_LIST_LINES)
+        safe_optional = self._limit_list_items(optional, self.MAX_LIST_LINES)
 
         # 绘制内容循环
         for i, text in enumerate(safe_goals):

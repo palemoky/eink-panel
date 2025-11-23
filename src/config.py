@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     OPENWEATHER_API_KEY: str = ""
     CITY_NAME: str = "Beijing"
     VPS_API_KEY: str = ""
+
+    # TODO 数据源配置
+    TODO_SOURCE: str = "config"  # config, gist, notion, sheets
+    GIST_ID: str = ""  # GitHub Gist ID for TODO lists
+    NOTION_TOKEN: str = ""  # Notion integration token
+    NOTION_DATABASE_ID: str = ""  # Notion database ID
+    GOOGLE_SHEETS_ID: str = ""  # Google Sheets spreadsheet ID
+    GOOGLE_CREDENTIALS_FILE: str = str(BASE_DIR / "credentials.json")  # Service account
+
+    # GitHub 配置
     GITHUB_USERNAME: str = ""
     GITHUB_TOKEN: str = ""
     GITHUB_STATS_MODE: str = "day"  # day, month, year
@@ -77,7 +87,13 @@ class Settings(BaseSettings):
         "1. English Practice (Daily)",
         "2. Daily Gym Workout Routine",
     ]
-    LIST_MUST: list[str] = ["Finish Python Code", "Email the Manager", "Buy Milk and Bread"]
+    LIST_MUST: list[str] = [
+        "Finish Python Code",
+        "Email the Manager",
+        "Buy Milk and Bread",
+        "Read a Book",
+        "Write a Blog Post",
+    ]
     LIST_OPTIONAL: list[str] = ["Read 'The Great Gatsby'", "Clean the Living Room", "Sleep Early"]
 
     # 配置加载规则

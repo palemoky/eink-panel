@@ -1,7 +1,12 @@
-httpx
-tenacity
-pendulum
-pydantic-settings
+httpx>=0.27.0
+pendulum>=3.0.0
+Pillow>=10.0.0
+
+# Optional TODO providers (install as needed)
+# For Notion: pip install notion-client
+# For Google Sheets: pip install gspread
+notion-client>=2.0.0
+gspread>=5.0.0
 borax
 Pillow
 RPi.GPIO
