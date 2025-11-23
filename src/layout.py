@@ -92,11 +92,7 @@ class DashboardLayout:
         header_items = [
             {"type": "weather", "data": weather},
             {"type": "date", "data": now},
-            {
-                "type": "custom",
-                "label": "Palemoky",
-                "value": "Stay Focused",
-            },
+            {"type": "greeting"},
             {"type": "time", "data": now},
         ]
 
@@ -204,6 +200,26 @@ class DashboardLayout:
                     center_x,
                     line1_y,
                     data.strftime("%H:%M"),
+                    font=r.font_time,
+                    align_y_center=False,
+                )
+
+            case "greeting":
+                # 第一行：标签（与其他组件对齐）
+                r.draw_centered_text(
+                    draw,
+                    center_x,
+                    line1_y,
+                    Config.GREETING_LABEL,
+                    font=r.font_s,
+                    align_y_center=False,
+                )
+                # 第二行：值（与其他组件第二行对齐）
+                r.draw_centered_text(
+                    draw,
+                    center_x,
+                    line2_y,
+                    Config.GREETING_TEXT,
                     font=r.font_time,
                     align_y_center=False,
                 )

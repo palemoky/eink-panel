@@ -33,13 +33,17 @@ class Settings(BaseSettings):
     CITY_NAME: str = "Beijing"
     VPS_API_KEY: str = ""
 
-    # TODO 数据源配置
+    # TODO 配置
     TODO_SOURCE: str = "config"  # config, gist, notion, sheets
-    GIST_ID: str = ""  # GitHub Gist ID for TODO lists
-    NOTION_TOKEN: str = ""  # Notion integration token
-    NOTION_DATABASE_ID: str = ""  # Notion database ID
-    GOOGLE_SHEETS_ID: str = ""  # Google Sheets spreadsheet ID
-    GOOGLE_CREDENTIALS_FILE: str = str(BASE_DIR / "credentials.json")  # Service account
+    GIST_ID: str = ""
+    NOTION_TOKEN: str = ""
+    NOTION_DATABASE_ID: str = ""
+    GOOGLE_SHEETS_ID: str = ""
+    GOOGLE_CREDENTIALS_FILE: str = "credentials.json"
+
+    # 问候语配置
+    GREETING_LABEL: str = "Palemoky"
+    GREETING_TEXT: str = "Stay Focused"
 
     # GitHub 配置
     GITHUB_USERNAME: str = ""
