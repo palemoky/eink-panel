@@ -19,16 +19,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libc-dev \
     libjpeg-dev \
     zlib1g-dev \
-    libjpeg-dev \
-    zlib1g-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
+# 安装 uv (使用官方安装脚本)
+ADD --chmod=755 https://astral.sh/uv/install.sh /install.sh
+RUN /install.sh && rm /install.sh
+ENV PATH="/root/.cargo/bin:$PATH"
+
 COPY requirements.txt .
-# 安装依赖到 /install 目录，使用 pip 缓存加速
-# --prefer-binary: 优先使用预编译的 wheel，避免编译
-# --no-compile: 跳过 .pyc 编译，加快安装速度
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --prefix=/install --prefer-binary --no-compile -r requirements.txt
+# 使用 uv 安装依赖 (比 pip 快 10-100 倍)
+# --system: 直接安装到系统 Python
+# --prefix: 安装到指定目录
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system --prefix=/install -r requirements.txt
 
 # Stage 2: Runtime
 FROM python:3.14-slim

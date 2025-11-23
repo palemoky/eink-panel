@@ -88,9 +88,31 @@ docker-compose up -d
 
 ## 🛠️ Local Development
 
+### Prerequisites
+
+This project uses [uv](https://github.com/astral-sh/uv) for faster dependency management (10-100x faster than pip).
+
+**Install uv** (recommended):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Or use pip if you prefer:
+```bash
+pip install uv
+```
+
+### Setup
+
 1.  **Install Dependencies**:
     ```bash
+    # Using uv (recommended, much faster)
+    uv pip install -r requirements.txt
+    uv pip install -r requirements-dev.txt
+    
+    # Or using pip (fallback)
     pip install -r requirements.txt
+    pip install -r requirements-dev.txt
     ```
 
 2.  **Run with Mock Driver**:
@@ -104,6 +126,13 @@ docker-compose up -d
     ```bash
     PYTHONPATH=. pytest tests/
     ```
+
+### Why uv?
+
+- ⚡ **10-100x faster** than pip for dependency installation
+- 🔒 Better dependency resolution
+- 💾 Smart caching across projects
+- ✅ 100% compatible with pip and requirements.txt
 
 ## 📁 Project Structure
 
