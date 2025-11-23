@@ -63,17 +63,22 @@ async def get_github_commits(client: httpx.AsyncClient):
     mode = Config.GITHUB_STATS_MODE.lower()
     if mode == "year":
         start_time = now_local.start_of("year")
-        end_time = now_local.end_of("year")
+        end_time = now_local  # 使用当前时间，不是年末
     elif mode == "month":
         start_time = now_local.start_of("month")
-        end_time = now_local.end_of("month")
+        end_time = now_local  # 使用当前时间，不是月末
     else:  # default to day
         start_time = now_local.start_of("day")
-        end_time = now_local.end_of("day")
+        end_time = now_local  # 使用当前时间，不是一天结束
 
     # 转换为 UTC 时间用于 GitHub API
     start_utc_iso = start_time.in_timezone("UTC").to_iso8601_string()
     end_utc_iso = end_time.in_timezone("UTC").to_iso8601_string()
+
+    # 添加调试日志
+    logger.debug(f"GitHub stats mode: {mode}")
+    logger.debug(f"Time range (local): {start_time} to {end_time}")
+    logger.debug(f"Time range (UTC): {start_utc_iso} to {end_utc_iso}")
 
     query = """
     query($username: String!, $from: DateTime!, $to: DateTime!) {
