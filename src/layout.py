@@ -291,7 +291,7 @@ class DashboardLayout:
 
         # 构建 BTC 字符串
         btc_val = f"${btc_data['usd']:,}"
-        btc_label = f"BTC ({btc_data['usd_24h_change']:+.1f}%)"  # :+ 会在正数前加 + 号
+        btc_label = f"₿TC ({btc_data['usd_24h_change']:+.1f}%)"  # :+ 会在正数前加 + 号
 
         # 构建 GitHub 标签
         mode = Config.GITHUB_STATS_MODE.lower()
