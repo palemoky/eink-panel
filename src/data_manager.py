@@ -52,7 +52,7 @@ class DataManager:
             async with asyncio.TaskGroup() as tg:
                 weather_task = tg.create_task(providers.get_weather(client))
                 commits_task = tg.create_task(providers.get_github_commits(client))
-                vps_task = tg.create_task(providers.get_vps_usage(client))
+                vps_task = tg.create_task(providers.get_vps_info(client))
                 btc_task = tg.create_task(providers.get_btc_price(client))
 
             # 获取结果（带缓存回退）
