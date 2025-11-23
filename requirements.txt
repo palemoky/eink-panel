@@ -11,5 +11,5 @@ gspread>=5.0.0
 
 # Hardware dependencies (mocked in tests/CI)
 # RPi.GPIO
-# gpiozero
+gpiozero
 spidev
