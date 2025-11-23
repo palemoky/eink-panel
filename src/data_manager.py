@@ -65,7 +65,7 @@ class DataManager:
             week_progress = providers.get_week_progress()
 
             # 检查是否年终
-            is_year_end, github_year_summary = providers.check_year_end_summary()
+            is_year_end, github_year_summary = await providers.check_year_end_summary(client)
 
             # 获取 TODO 列表
             from . import todo_providers

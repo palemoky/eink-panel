@@ -127,6 +127,22 @@ async def get_github_commits(client: httpx.AsyncClient):
         raise RuntimeError(f"GitHub API Error: {e}") from e
 
 
+async def check_year_end_summary(client: httpx.AsyncClient):
+    """
+    检查是否是年终（12月31日），如果是则获取年度总结
+    Returns: (is_year_end: bool, summary_data: dict | None)
+    """
+    now = pendulum.now(Config.TIMEZONE)
+    # 仅在 12月31日 触发
+    is_year_end = now.month == 12 and now.day == 31
+
+    if is_year_end:
+        summary = await get_github_year_summary(client)
+        return True, summary
+
+    return False, None
+
+
 @retry_strategy
 async def get_github_year_summary(client: httpx.AsyncClient):
     """获取年度详细数据（用于年终总结）"""
