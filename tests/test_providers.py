@@ -24,8 +24,8 @@ async def test_get_weather_success():
     mock_client = AsyncMock(spec=httpx.AsyncClient)
     mock_client.get.return_value = mock_response
 
-    # Set API key temporarily
-    with patch("src.config.Config.OPENWEATHER_API_KEY", "fake_key"):
+    # Set API key temporarily - patch the grouped config
+    with patch("src.config.Config.api.openweather_api_key", "fake_key"):
         data = await get_weather(mock_client)
 
     assert data["temp"] == "20.5"
@@ -39,9 +39,10 @@ async def test_get_github_commits_fail():
     mock_client = AsyncMock(spec=httpx.AsyncClient)
     mock_client.post.side_effect = httpx.RequestError("Network Down", request=MagicMock())
 
+    # Patch the grouped config
     with (
-        patch("src.config.Config.GITHUB_USERNAME", "testuser"),
-        patch("src.config.Config.GITHUB_TOKEN", "fake_token"),
+        patch("src.config.Config.github.username", "testuser"),
+        patch("src.config.Config.github.token", "fake_token"),
     ):
         with pytest.raises(tenacity.RetryError):
             await get_github_commits(mock_client)

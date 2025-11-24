@@ -25,6 +25,7 @@ dependencies = [
     "borax>=4.0.0",
     "notion-client>=2.0.0",
     "gspread>=5.0.0",
+    "watchdog>=3.0.0",
 ]
 
 [project.optional-dependencies]

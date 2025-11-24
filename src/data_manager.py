@@ -85,7 +85,7 @@ class DataManager:
 
             # Fetch quote (if enabled)
             quote = None
-            if Config.DISPLAY_MODE == "quote":
+            if Config.display.mode == "quote":
                 try:
                     from .quote_provider import get_quote
 

@@ -81,7 +81,7 @@ class DashboardLayout:
             return image
 
         # Check for quote display mode
-        if Config.DISPLAY_MODE == "quote" and data.get("quote"):
+        if Config.display.mode == "quote" and data.get("quote"):
             self._draw_quote_screen(draw, width, height, data["quote"])
             return image
 

@@ -27,7 +27,7 @@ class HolidayManager:
             dict or None: 如果是节日，返回 {'name': 'Birthday', 'icon': 'cake', 'message': 'Happy Birthday!'}
                           否则返回 None
         """
-        now = pendulum.now(Config.TIMEZONE)
+        now = pendulum.now(Config.hardware.timezone)
         today_str = now.format("MM-DD")
         lunar = LunarDate.from_solar_date(now.year, now.month, now.day)
 

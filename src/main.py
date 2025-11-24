@@ -14,14 +14,14 @@ import pendulum
 
 # Try relative import first (for package mode)
 try:
-    from .config import Config
+    from .config import Config, start_config_watcher, stop_config_watcher
     from .data_manager import DataManager
     from .drivers.factory import get_driver
     from .layout import DashboardLayout
 except ImportError:
     # If relative import fails, add parent directory to path
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from src.config import Config
+    from src.config import Config, start_config_watcher, stop_config_watcher
     from src.data_manager import DataManager
     from src.drivers.factory import get_driver
     from src.layout import DashboardLayout
@@ -59,18 +59,20 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def is_in_quiet_hours():
     """检查当前时间是否在静默时间段内，并返回需要休眠的秒数"""
-    now = pendulum.now(Config.TIMEZONE)
+    now = pendulum.now(Config.hardware.timezone)
 
     # 构建今天的开始和结束时间点
-    start_time = now.replace(hour=Config.QUIET_START_HOUR, minute=0, second=0, microsecond=0)
-    end_time = now.replace(hour=Config.QUIET_END_HOUR, minute=0, second=0, microsecond=0)
+    start_time = now.replace(
+        hour=Config.hardware.quiet_start_hour, minute=0, second=0, microsecond=0
+    )
+    end_time = now.replace(hour=Config.hardware.quiet_end_hour, minute=0, second=0, microsecond=0)
 
     # 处理跨天的情况 (例如 23:00 到 06:00)
-    if Config.QUIET_START_HOUR > Config.QUIET_END_HOUR:
-        if now.hour >= Config.QUIET_START_HOUR:
+    if Config.hardware.quiet_start_hour > Config.hardware.quiet_end_hour:
+        if now.hour >= Config.hardware.quiet_start_hour:
             # 现在是晚上，结束时间是明天
             end_time = end_time.add(days=1)
-        elif now.hour < Config.QUIET_END_HOUR:
+        elif now.hour < Config.hardware.quiet_end_hour:
             # 现在是凌晨，开始时间是昨天
             start_time = start_time.subtract(days=1)
 
@@ -94,8 +96,26 @@ async def main():
         return
 
     logger.info("Starting E-Ink Panel Dashboard...")
-    logger.info(f"Refresh interval: {Config.REFRESH_INTERVAL}s")
-    logger.info(f"Quiet hours: {Config.QUIET_START_HOUR}:00 - {Config.QUIET_END_HOUR}:00")
+    logger.info(f"Refresh interval: {Config.hardware.refresh_interval}s")
+    logger.info(
+        f"Quiet hours: {Config.hardware.quiet_start_hour}:00 - {Config.hardware.quiet_end_hour}:00"
+    )
+
+    # Event to signal config reload and trigger immediate refresh
+    config_changed = asyncio.Event()
+
+    def on_config_reload():
+        """Callback when config is reloaded - trigger screen refresh"""
+        logger.info("🔄 Config changed, triggering screen refresh...")
+        config_changed.set()
+
+    # Register callback for config reload
+    from .config import register_reload_callback
+
+    register_reload_callback(on_config_reload)
+
+    # Start configuration file watcher for hot reload
+    start_config_watcher()
 
     # 初始化驱动
     _driver = get_driver()
@@ -113,29 +133,37 @@ async def main():
             epd.sleep()
 
             while True:
-                now = pendulum.now(Config.TIMEZONE)
+                now = pendulum.now(Config.hardware.timezone)
                 current_time = now.to_time_string()
 
                 # 检查是否在静默时间段
                 in_quiet, sleep_seconds = is_in_quiet_hours()
                 if in_quiet:
                     logger.info(
-                        f"In quiet hours ({Config.QUIET_START_HOUR}:00-{Config.QUIET_END_HOUR}:00), sleeping for {sleep_seconds} seconds"
+                        f"In quiet hours ({Config.hardware.quiet_start_hour}:00-{Config.hardware.quiet_end_hour}:00), sleeping for {sleep_seconds} seconds"
                     )
-                    await asyncio.sleep(sleep_seconds)
+                    # During quiet hours, still check for config changes but don't refresh
+                    try:
+                        await asyncio.wait_for(config_changed.wait(), timeout=sleep_seconds)
+                        config_changed.clear()
+                        logger.info("Config changed during quiet hours, will apply on next refresh")
+                    except asyncio.TimeoutError:
+                        pass
                     continue
 
                 logger.info(f"Refreshing at {current_time}")
 
                 # Mode switching logic
-                display_mode = Config.DISPLAY_MODE.lower()
+                display_mode = Config.display.mode.lower()
                 logger.info(f"Current display mode: {display_mode}")
 
                 if display_mode == "wallpaper":
                     from .wallpaper import WallpaperManager
 
                     wallpaper_manager = WallpaperManager()
-                    wallpaper_name = Config.WALLPAPER_NAME if Config.WALLPAPER_NAME else None
+                    wallpaper_name = (
+                        Config.display.wallpaper_name if Config.display.wallpaper_name else None
+                    )
                     image = wallpaper_manager.create_wallpaper(
                         epd.width, epd.height, wallpaper_name
                     )
@@ -172,7 +200,7 @@ async def main():
                     image = layout.create_image(epd.width, epd.height, data)
                     logger.info("📊 Dashboard mode active")
 
-                if Config.IS_SCREENSHOT_MODE:
+                if Config.hardware.is_screenshot_mode:
                     # 截图模式：保存到文件
                     image.save("screenshot.png")
                     logger.info("Screenshot saved to screenshot.png")
@@ -188,8 +216,17 @@ async def main():
                 epd.sleep()
                 logger.info("Display updated and put to sleep.")
 
-                # 正常刷新间隔
-                await asyncio.sleep(Config.REFRESH_INTERVAL)
+                # Wait for either refresh interval or config change event
+                try:
+                    await asyncio.wait_for(
+                        config_changed.wait(), timeout=Config.hardware.refresh_interval
+                    )
+                    # Config changed, clear the event and refresh immediately
+                    config_changed.clear()
+                    logger.info("⚡ Immediate refresh triggered by config change")
+                except asyncio.TimeoutError:
+                    # Normal timeout, continue to next iteration
+                    pass
 
         except KeyboardInterrupt:
             logger.info("Exiting...")
@@ -198,6 +235,9 @@ async def main():
             epd.sleep()
         except Exception as e:
             logger.error(f"Critical Error: {e}", exc_info=True)
+        finally:
+            # Stop config watcher on exit
+            stop_config_watcher()
 
 
 if __name__ == "__main__":

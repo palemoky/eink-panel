@@ -109,7 +109,7 @@ async def get_github_commits(client: httpx.AsyncClient):
     end_utc_iso = end_time.to_iso8601_string()
 
     # Debug logging
-    now_local = pendulum.now(Config.TIMEZONE)
+    now_local = pendulum.now(Config.hardware.timezone)
     logger.debug(f"GitHub stats mode: {mode}")
     logger.debug(f"Current time (local): {now_local}")
     logger.debug(f"Current time (UTC): {now_utc}")
@@ -171,7 +171,7 @@ async def check_year_end_summary(client: httpx.AsyncClient):
     Returns:
         Tuple of (is_year_end: bool, summary_data: dict | None)
     """
-    now = pendulum.now(Config.TIMEZONE)
+    now = pendulum.now(Config.hardware.timezone)
     # Trigger only on December 31st
     is_year_end = now.month == 12 and now.day == 31
 
@@ -201,7 +201,7 @@ async def get_github_year_summary(client: httpx.AsyncClient):
     url = "https://api.github.com/graphql"
     headers = {"Authorization": f"Bearer {Config.GITHUB_TOKEN}", "Content-Type": "application/json"}
 
-    now_local = pendulum.now(Config.TIMEZONE)
+    now_local = pendulum.now(Config.hardware.timezone)
     start_of_year = now_local.start_of("year").in_timezone("UTC").to_iso8601_string()
     end_of_year = now_local.end_of("year").in_timezone("UTC").to_iso8601_string()
 
@@ -316,7 +316,7 @@ def get_week_progress():
     Returns:
         Progress percentage (0-100) from start of week to now
     """
-    now = pendulum.now(Config.TIMEZONE)
+    now = pendulum.now(Config.hardware.timezone)
     start_of_week = now.start_of("week")
     end_of_week = now.end_of("week")
 

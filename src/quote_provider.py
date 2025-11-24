@@ -129,7 +129,7 @@ class QuoteProvider:
 
             # Check if cache is still valid
             cached_time = datetime.fromisoformat(cache_data["timestamp"])
-            cache_duration = timedelta(hours=Config.QUOTE_CACHE_HOURS)
+            cache_duration = timedelta(hours=Config.display.quote_cache_hours)
 
             if datetime.now() - cached_time < cache_duration:
                 logger.info("Using cached quote")

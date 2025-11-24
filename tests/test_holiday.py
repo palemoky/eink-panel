@@ -7,9 +7,9 @@ from src.holiday import HolidayManager
 
 
 def test_holiday_birthday(monkeypatch):
-    # Mock Config
-    monkeypatch.setattr(Config, "BIRTHDAY", "11-22")
-    monkeypatch.setattr(Config, "USER_NAME", "TestUser")
+    # Mock Config - patch the grouped config
+    monkeypatch.setattr(Config.personal, "birthday", "11-22")
+    monkeypatch.setattr(Config.personal, "user_name", "TestUser")
 
     # Mock time to birthday
     now = pendulum.datetime(2025, 11, 22, tz="Asia/Shanghai")

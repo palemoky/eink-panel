@@ -7,8 +7,8 @@ from src.layout import DashboardLayout
 
 
 def test_layout_creation(monkeypatch):
-    # Mock Config to ensure consistent data
-    monkeypatch.setattr(Config, "CITY_NAME", "TestCity")
+    # Mock Config to ensure consistent data - patch the grouped config
+    monkeypatch.setattr(Config.api, "city_name", "TestCity")
 
     layout = DashboardLayout()
 
