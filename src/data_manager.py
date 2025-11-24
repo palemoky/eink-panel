@@ -79,12 +79,9 @@ class DataManager:
             is_year_end, github_year_summary = await providers.check_year_end_summary(client)
 
             # Fetch TODO lists
-            from .todo_providers import get_todo_provider
+            from .todo_providers import get_todo_lists
 
-            todo_provider = get_todo_provider()
-            todo_goals = todo_provider.get_goals() if todo_provider else []
-            todo_must = todo_provider.get_must() if todo_provider else []
-            todo_optional = todo_provider.get_optional() if todo_provider else []
+            todo_goals, todo_must, todo_optional = await get_todo_lists()
 
             # Fetch quote (if enabled)
             quote = None
