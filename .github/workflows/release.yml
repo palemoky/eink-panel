@@ -229,8 +229,6 @@ jobs:
           else
             echo "No old Docker Hub tags to clean"
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Notify on failure via Xiaomi Speaker
       - name: Notify via Xiaomi Speaker
@@ -252,10 +250,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update Docker Hub Description
+      - name: Sync README to Docker Hub
         uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ env.DOCKERHUB_IMAGE }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
+          short-description: ${{ github.event.repository.description }}
           readme-filepath: ./README.md
