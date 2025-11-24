@@ -100,17 +100,41 @@ class Settings(BaseSettings):
 
     # 列表内容
     LIST_GOALS: list[str] = [
-        "1. English Practice (Daily)",
-        "2. Daily Gym Workout Routine",
+        "1.	Finish reading “Clean Code” by end of month",
+        "2.	Learn the basics of Rust programming",
+        "3.	Complete the Raspberry Pi e-ink dashboard project",
+        "4.	Improve spoken English to B2 level",
+        "5.	Run a 5km race in under 30 minutes",
+        "6.	Build a personal website portfolio",
+        "7.	Learn how to deploy apps with Docker and Kubernetes",
+        "8.	Write a blog post every week for 3 months",
+        "9.	Refactor legacy codebase at work",
+        "10.	Design and implement a home automation system",
     ]
     LIST_MUST: list[str] = [
-        "Finish Python Code",
-        "Email the Manager",
-        "Buy Milk and Bread",
-        "Read a Book",
-        "Write a Blog Post",
+        "1.	Finish reading “Clean Code” by end of month",
+        "2.	Learn the basics of Rust programming",
+        "3.	Complete the Raspberry Pi e-ink dashboard project",
+        "4.	Improve spoken English to B2 level",
+        "5.	Run a 5km race in under 30 minutes",
+        "6.	Build a personal website portfolio",
+        "7.	Learn how to deploy apps with Docker and Kubernetes",
+        "8.	Write a blog post every week for 3 months",
+        "9.	Refactor legacy codebase at work",
+        "10.	Design and implement a home automation system",
     ]
-    LIST_OPTIONAL: list[str] = ["Read 'The Great Gatsby'", "Clean the Living Room", "Sleep Early"]
+    LIST_OPTIONAL: list[str] = [
+        "1.	Finish reading “Clean Code” by end of month",
+        "2.	Learn the basics of Rust programming",
+        "3.	Complete the Raspberry Pi e-ink dashboard project",
+        "4.	Improve spoken English to B2 level",
+        "5.	Run a 5km race in under 30 minutes",
+        "6.	Build a personal website portfolio",
+        "7.	Learn how to deploy apps with Docker and Kubernetes",
+        "8.	Write a blog post every week for 3 months",
+        "9.	Refactor legacy codebase at work",
+        "10.	Design and implement a home automation system",
+    ]
 
     # 配置加载规则
     model_config = SettingsConfigDict(
