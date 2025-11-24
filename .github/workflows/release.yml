@@ -164,41 +164,6 @@ jobs:
             echo "No old pre-release versions to delete (keeping latest 2)"
           fi
           
-          # Clean up untagged images (SHA256 versions without tags)
-          echo "Cleaning up untagged GHCR images..."
-          UNTAGGED_IDS=$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions?per_page=100" \
-            --jq '.[] | select(.metadata.container.tags | length == 0) | .id' \
-            2>/dev/null || \
-          gh api \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions?per_page=100" \
-            --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
-          
-          if [ -n "$UNTAGGED_IDS" ]; then
-            echo "Deleting untagged images..."
-            echo "$UNTAGGED_IDS" | while read version_id; do
-              gh api \
-                --method DELETE \
-                -H "Accept: application/vnd.github+json" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions/${version_id}" \
-                2>/dev/null && echo "✓ Deleted untagged version: $version_id" || \
-              gh api \
-                --method DELETE \
-                -H "Accept: application/vnd.github+json" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions/${version_id}" \
-                && echo "✓ Deleted untagged version: $version_id" || \
-                echo "✗ Failed to delete untagged version: $version_id"
-            done
-          else
-            echo "No untagged images to delete"
-          fi
-          
           # Clean up Docker Hub old images (keep latest 2 alpha versions)
           echo "Cleaning up Docker Hub pre-release images..."
           
@@ -228,6 +193,50 @@ jobs:
             done
           else
             echo "No old Docker Hub tags to clean"
+          fi
+
+      # Clean up untagged GHCR images (runs on every release)
+      - name: Clean up untagged GHCR images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up untagged GHCR images (SHA256 digests)..."
+          
+          PACKAGE_NAME="${{ github.event.repository.name }}"
+          OWNER="${{ github.repository_owner }}"
+          
+          # Get all untagged versions (try org first, fall back to user)
+          UNTAGGED_IDS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions?per_page=100" \
+            --jq '.[] | select(.metadata.container.tags | length == 0) | .id' \
+            2>/dev/null || \
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions?per_page=100" \
+            --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
+          
+          if [ -n "$UNTAGGED_IDS" ]; then
+            echo "Found $(echo "$UNTAGGED_IDS" | wc -l) untagged images to delete"
+            echo "$UNTAGGED_IDS" | while read version_id; do
+              gh api \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions/${version_id}" \
+                2>/dev/null && echo "✓ Deleted untagged SHA256: $version_id" || \
+              gh api \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions/${version_id}" \
+                && echo "✓ Deleted untagged SHA256: $version_id" || \
+                echo "✗ Failed to delete untagged SHA256: $version_id"
+            done
+          else
+            echo "No untagged images to delete"
           fi
 
       # Notify on failure via Xiaomi Speaker
