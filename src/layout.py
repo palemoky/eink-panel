@@ -50,7 +50,7 @@ class DashboardLayout:
         self.MAX_LIST_LINES = 5
 
         # 天气图标配置
-        self.WEATHER_ICON_OFFSET_X = -35  # 图标相对中心点的X偏移
+        self.WEATHER_ICON_OFFSET_X = -40  # 图标相对中心点的X偏移
         self.WEATHER_ICON_SIZE = 30  # 图标尺寸
 
     def create_image(self, width, height, data):
