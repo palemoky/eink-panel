@@ -37,6 +37,10 @@ class Renderer:
             # Fallback mapping
             self.font_xs = self.font_value = self.font_date_big = self.font_date_small = self.font_s
 
+    def draw_text(self, draw, x, y, text, font, fill=0, anchor=None):
+        """Draw text at specified coordinates."""
+        draw.text((x, y), text, font=font, fill=fill, anchor=anchor)
+
     def draw_centered_text(self, draw, x, y, text, font, fill=0, align_y_center=True):
         try:
             bbox = draw.textbbox((0, 0), text, font=font)
