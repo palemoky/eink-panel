@@ -367,11 +367,13 @@ class Dashboard:
 
     async def __aenter__(self):
         """异步上下文管理器入口"""
+        self.client = httpx.AsyncClient()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """异步上下文管理器退出"""
-        # 不需要清理资源，因为我们使用的是临时 client
+        if self.client:
+            await self.client.aclose()
         return False
 
     def load_cache(self):
@@ -400,10 +402,16 @@ class Dashboard:
 
         data = {"is_year_end": False, "github_year_summary": None}
 
-        async with httpx.AsyncClient() as client:
-            is_year_end, github_year_summary = await check_year_end_summary(client)
+        # Use persistent client if available, otherwise create temporary one
+        if self.client:
+            is_year_end, github_year_summary = await check_year_end_summary(self.client)
             data["is_year_end"] = is_year_end
             data["github_year_summary"] = github_year_summary
+        else:
+            async with httpx.AsyncClient() as client:
+                is_year_end, github_year_summary = await check_year_end_summary(client)
+                data["is_year_end"] = is_year_end
+                data["github_year_summary"] = github_year_summary
 
         return data
 
@@ -424,15 +432,27 @@ class Dashboard:
         }
 
         # Dashboard mode: fetch all required data concurrently
-        async with httpx.AsyncClient() as client:
+        # Dashboard mode: fetch all required data concurrently
+        # Use persistent client if available, otherwise create temporary one
+        if self.client:
             async with asyncio.TaskGroup() as tg:
                 tasks = {}
-                tasks["weather"] = tg.create_task(get_weather(client))
+                tasks["weather"] = tg.create_task(get_weather(self.client))
                 tasks["github"] = tg.create_task(
-                    get_github_commits(client, Config.GITHUB_STATS_MODE.lower())
+                    get_github_commits(self.client, Config.GITHUB_STATS_MODE.lower())
                 )
-                tasks["vps"] = tg.create_task(get_vps_info(client))
-                tasks["btc"] = tg.create_task(get_btc_data(client))
+                tasks["vps"] = tg.create_task(get_vps_info(self.client))
+                tasks["btc"] = tg.create_task(get_btc_data(self.client))
+        else:
+            async with httpx.AsyncClient() as client:
+                async with asyncio.TaskGroup() as tg:
+                    tasks = {}
+                    tasks["weather"] = tg.create_task(get_weather(client))
+                    tasks["github"] = tg.create_task(
+                        get_github_commits(client, Config.GITHUB_STATS_MODE.lower())
+                    )
+                    tasks["vps"] = tg.create_task(get_vps_info(client))
+                    tasks["btc"] = tg.create_task(get_btc_data(client))
 
             # Get results with cache fallback
             data["weather"] = self._get_with_cache_fallback(tasks["weather"], "weather", {})
