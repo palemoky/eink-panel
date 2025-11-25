@@ -17,8 +17,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.config import Config  # noqa: E402
-from src.data_manager import DataManager  # noqa: E402
-from src.layout import DashboardLayout  # noqa: E402
+from src.layouts import DashboardLayout  # noqa: E402
+from src.providers import Dashboard  # noqa: E402
 
 
 async def generate_real_screenshot(
@@ -38,8 +38,8 @@ async def generate_real_screenshot(
     layout = DashboardLayout()
 
     # Fetch real data
-    async with DataManager() as dm:
-        data = await dm.fetch_all_data()
+    async with Dashboard() as dm:
+        data = await dm.fetch_dashboard_data()
 
     # Mock date if specified
     if mock_date:

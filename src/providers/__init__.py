@@ -8,6 +8,6 @@ This package contains providers for:
 - Wallpaper: Wallpaper images
 """
 
-from .dashboard import DataManager
+from .dashboard import Dashboard
 
-__all__ = ["DataManager"]
+__all__ = ["Dashboard"]

@@ -351,7 +351,7 @@ def get_week_progress():
 # ===== Data Manager Class =====
 
 
-class DataManager:
+class Dashboard:
     """Manages data fetching from multiple API providers.
 
     Handles HTTP client lifecycle, concurrent API calls, error recovery,
@@ -391,20 +391,22 @@ class DataManager:
         except Exception as e:
             logger.error(f"Failed to save cache: {e}")
 
-    async def fetch_all_data(self) -> dict:
-        """并发获取所有数据，根据显示模式只获取需要的数据"""
-        display_mode = Config.display.mode.lower()
-        logger.info(f"Fetching data for mode: {display_mode}")
+    async def fetch_year_end_data(self) -> dict:
+        """Fetch data specifically for year-end summary."""
+        logger.info("Fetching year-end summary data")
 
-        # Define data requirements for each mode
-        # Note: quote and poetry modes are handled in main.py
-        MODE_REQUIREMENTS = {
-            "dashboard": {"weather", "github", "vps", "btc", "week", "year_end", "todo"},
-            "wallpaper": set(),  # No data needed
-        }
+        data = {"is_year_end": False, "github_year_summary": None}
 
-        required_data = MODE_REQUIREMENTS.get(display_mode, {"weather", "github", "vps", "btc"})
-        logger.debug(f"Required data for {display_mode}: {required_data}")
+        async with httpx.AsyncClient() as client:
+            is_year_end, github_year_summary = await check_year_end_summary(client)
+            data["is_year_end"] = is_year_end
+            data["github_year_summary"] = github_year_summary
+
+        return data
+
+    async def fetch_dashboard_data(self) -> dict:
+        """Fetch all data required for the main dashboard."""
+        logger.info("Fetching dashboard data")
 
         # Initialize data structure
         data = {
@@ -413,71 +415,40 @@ class DataManager:
             "vps_usage": 0,
             "btc_price": {},
             "week_progress": 0,
-            "is_year_end": False,
-            "github_year_summary": None,
             "todo_goals": [],
             "todo_must": [],
             "todo_optional": [],
         }
 
-        # Wallpaper mode: no data needed
-        if display_mode == "wallpaper":
-            logger.info("Wallpaper mode: no data fetching required")
-            self.save_cache(data)
-            return data
-
         # Dashboard mode: fetch all required data concurrently
         async with httpx.AsyncClient() as client:
             async with asyncio.TaskGroup() as tg:
                 tasks = {}
-
-                if "weather" in required_data:
-                    tasks["weather"] = tg.create_task(get_weather(client))
-
-                if "github" in required_data:
-                    tasks["github"] = tg.create_task(
-                        get_github_commits(client, Config.GITHUB_STATS_MODE.lower())
-                    )
-
-                if "vps" in required_data:
-                    tasks["vps"] = tg.create_task(get_vps_info(client))
-
-                if "btc" in required_data:
-                    tasks["btc"] = tg.create_task(get_btc_data(client))
+                tasks["weather"] = tg.create_task(get_weather(client))
+                tasks["github"] = tg.create_task(
+                    get_github_commits(client, Config.GITHUB_STATS_MODE.lower())
+                )
+                tasks["vps"] = tg.create_task(get_vps_info(client))
+                tasks["btc"] = tg.create_task(get_btc_data(client))
 
             # Get results with cache fallback
-            if "weather" in tasks:
-                data["weather"] = self._get_with_cache_fallback(tasks["weather"], "weather", {})
-
-            if "github" in tasks:
-                data["github_commits"] = self._get_with_cache_fallback(
-                    tasks["github"], "github_commits", 0
-                )
-
-            if "vps" in tasks:
-                data["vps_usage"] = self._get_with_cache_fallback(tasks["vps"], "vps_usage", 0)
-
-            if "btc" in tasks:
-                data["btc_price"] = self._get_with_cache_fallback(tasks["btc"], "btc_price", {})
+            data["weather"] = self._get_with_cache_fallback(tasks["weather"], "weather", {})
+            data["github_commits"] = self._get_with_cache_fallback(
+                tasks["github"], "github_commits", 0
+            )
+            data["vps_usage"] = self._get_with_cache_fallback(tasks["vps"], "vps_usage", 0)
+            data["btc_price"] = self._get_with_cache_fallback(tasks["btc"], "btc_price", {})
 
             # Calculate week progress
-            if "week" in required_data:
-                data["week_progress"] = get_week_progress()
-
-            # Check year-end summary
-            if "year_end" in required_data:
-                is_year_end, github_year_summary = await check_year_end_summary(client)
-                data["is_year_end"] = is_year_end
-                data["github_year_summary"] = github_year_summary
+            data["week_progress"] = get_week_progress()
 
             # Fetch TODO lists
-            if "todo" in required_data:
-                from .todo import get_todo_lists
+            from .todo import get_todo_lists
 
-                todo_goals, todo_must, todo_optional = await get_todo_lists()
-                data["todo_goals"] = todo_goals
-                data["todo_must"] = todo_must
-                data["todo_optional"] = todo_optional
+            todo_goals, todo_must, todo_optional = await get_todo_lists()
+            data["todo_goals"] = todo_goals
+            data["todo_must"] = todo_must
+            data["todo_optional"] = todo_optional
 
             self.save_cache(data)
             return data

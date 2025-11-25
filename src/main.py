@@ -10,6 +10,7 @@ import os
 import signal
 import sys
 
+import httpx
 import pendulum
 from PIL import Image, ImageDraw
 
@@ -18,7 +19,7 @@ try:
     from .config import Config, register_reload_callback, start_config_watcher, stop_config_watcher
     from .drivers.factory import get_driver
     from .layouts import DashboardLayout
-    from .providers import DataManager
+    from .providers import Dashboard
 except ImportError:
     # If relative import fails, add parent directory to path
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -30,7 +31,7 @@ except ImportError:
     )
     from src.drivers.factory import get_driver
     from src.layouts import DashboardLayout
-    from src.providers import DataManager
+    from src.providers import Dashboard
 
 # Configure logging (supports environment variable control)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -306,8 +307,8 @@ async def main():
 
     layout = DashboardLayout()
 
-    # Use DataManager context manager (manages HTTP Client)
-    async with DataManager() as dm:
+    # Use Dashboard context manager (manages HTTP Client)
+    async with Dashboard() as dm:
         try:
             # Perform initial clear on first startup
             logger.info("Performing initial clear...")
@@ -325,9 +326,6 @@ async def main():
 
                 logger.info(f"Refreshing at {current_time}")
 
-                # Fetch data based on current mode
-                data = await dm.fetch_all_data()
-
                 # Determine display mode (holiday and year-end have highest priority)
                 from src.holiday import HolidayManager
 
@@ -337,12 +335,40 @@ async def main():
                 # Check for special modes first
                 if holiday:
                     display_mode = "holiday"
-                elif data.get("is_year_end") and data.get("github_year_summary"):
-                    display_mode = "year_end"
                 else:
-                    display_mode = Config.display.mode.lower()
+                    # Check for year-end (Dec 31st)
+                    if now.month == 12 and now.day == 31:
+                        display_mode = "year_end"
+                    else:
+                        display_mode = Config.display.mode.lower()
 
                 logger.info(f"Current display mode: {display_mode}")
+
+                # Fetch data based on determined mode
+                data = {}
+
+                if display_mode == "dashboard":
+                    data = await dm.fetch_dashboard_data()
+
+                elif display_mode == "year_end":
+                    data = await dm.fetch_year_end_data()
+                    # Special handling: if year_end mode but no data, fallback to dashboard
+                    if not data.get("github_year_summary"):
+                        logger.warning("Year-end mode but no data, falling back to dashboard")
+                        display_mode = "dashboard"
+                        data = await dm.fetch_dashboard_data()
+
+                elif display_mode == "quote":
+                    from src.providers.quote import get_quote
+
+                    async with httpx.AsyncClient() as client:
+                        data["quote"] = await get_quote(client)
+
+                elif display_mode == "poetry":
+                    from src.providers.poetry import get_poetry
+
+                    async with httpx.AsyncClient() as client:
+                        data["quote"] = await get_poetry(client)
 
                 # Generate and display image
                 image = generate_image(display_mode, data, epd, layout)
