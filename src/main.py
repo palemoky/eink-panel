@@ -271,7 +271,12 @@ async def main():
                 epd.init()
                 epd.display(image)
                 epd.sleep()
-                logger.info("Display updated and put to sleep.")
+
+                # Calculate and log next refresh time
+                next_refresh = pendulum.now(Config.hardware.timezone).add(
+                    seconds=Config.hardware.refresh_interval
+                )
+                logger.info(f"✅ Display updated | Next refresh: {next_refresh.format('HH:mm:ss')}")
 
                 # Wait for either refresh interval or config change event
                 try:
