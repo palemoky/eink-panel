@@ -1,4 +1,4 @@
-# src/data_provider.py
+# src/dashboard_provider.py
 """Data manager for coordinating API calls and caching.
 
 Manages HTTP client lifecycle and coordinates concurrent data fetching
@@ -16,7 +16,7 @@ from .config import Config
 logger = logging.getLogger(__name__)
 
 
-class DataProvider:
+class DashboardProvider:
     """Manages data fetching from multiple API providers.
 
     Handles HTTP client lifecycle, concurrent API calls, and error recovery.
