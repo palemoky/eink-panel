@@ -8,7 +8,7 @@ import textwrap
 
 from PIL import Image, ImageDraw
 
-from ..dashboard_renderer import Renderer
+from ..renderer.dashboard import DashboardRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class QuoteLayout:
 
     def __init__(self):
         """Initialize quote layout with renderer."""
-        self.renderer = Renderer()
+        self.renderer = DashboardRenderer()
 
     def create_quote_image(self, width: int, height: int, quote: dict) -> Image.Image:
         """Create elegant quote image with automatic text wrapping.

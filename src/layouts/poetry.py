@@ -7,7 +7,7 @@ import logging
 
 from PIL import Image, ImageDraw
 
-from ..dashboard_renderer import Renderer
+from ..renderer.dashboard import DashboardRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class PoetryLayout:
 
     def __init__(self):
         """Initialize poetry layout with renderer."""
-        self.renderer = Renderer()
+        self.renderer = DashboardRenderer()
 
     def create_poetry_image(self, width: int, height: int, poetry: dict) -> Image.Image:
         """Create elegant vertical poetry image.

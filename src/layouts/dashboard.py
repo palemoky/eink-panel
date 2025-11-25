@@ -9,7 +9,7 @@ import datetime
 from PIL import Image, ImageDraw
 
 from ..config import Config
-from ..dashboard_renderer import Renderer
+from ..renderer.dashboard import DashboardRenderer
 
 
 class DashboardLayout:
@@ -20,7 +20,7 @@ class DashboardLayout:
     """
 
     def __init__(self):
-        self.renderer = Renderer()
+        self.renderer = DashboardRenderer()
 
         # Layout parameters
         self.TOP_Y = 20  # Top section Y position

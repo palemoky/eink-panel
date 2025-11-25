@@ -348,9 +348,6 @@ def get_week_progress():
     return int((passed_seconds / total_seconds) * 100)
 
 
-# ===== Data Manager Class =====
-
-
 class Dashboard:
     """Manages data fetching from multiple API providers.
 

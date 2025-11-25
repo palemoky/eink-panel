@@ -8,10 +8,10 @@ import math
 
 from PIL import ImageFont
 
-from .config import Config
+from ..config import Config
 
 
-class Renderer:
+class DashboardRenderer:
     """Handles all drawing operations for the dashboard.
 
     Manages fonts, text rendering, icon drawing, and shape creation.
@@ -107,7 +107,7 @@ class Renderer:
         from PIL import Image
 
         # 尝试从文件加载
-        from .config import BASE_DIR
+        from ..config import BASE_DIR
 
         icon_path = BASE_DIR / "resources" / "icons" / "weather" / f"{icon_name}.png"
 
