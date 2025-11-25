@@ -164,34 +164,9 @@ async def main():
                 logger.info(f"Current display mode: {display_mode}")
 
                 match display_mode:
-                    case "wallpaper":
-                        # Wallpaper mode: generate wallpaper image
-                        from src.wallpaper import WallpaperManager
-
-                        wallpaper_manager = WallpaperManager()
-                        wallpaper_name = (
-                            Config.display.wallpaper_name if Config.display.wallpaper_name else None
-                        )
-                        image = wallpaper_manager.create_wallpaper(
-                            epd.width, epd.height, wallpaper_name
-                        )
-                        logger.info(f"🎨 Wallpaper mode: {wallpaper_name or 'random'}")
-
-                    case "poetry":
-                        # Poetry mode: use elegant vertical layout
-                        if not data.get("quote"):
-                            logger.warning(
-                                "Poetry mode enabled but no poetry found, falling back to dashboard"
-                            )
-                            image = layout.create_image(epd.width, epd.height, data)
-                        else:
-                            from src.poetry_layout import PoetryLayout
-
-                            poetry_layout = PoetryLayout()
-                            image = poetry_layout.create_poetry_image(
-                                epd.width, epd.height, data["quote"]
-                            )
-                            logger.info("📜 Poetry mode active (vertical layout)")
+                    case "dashboard":
+                        image = layout.create_image(epd.width, epd.height, data)
+                        logger.info("📊 Dashboard mode active")
 
                     case "quote":
                         # Quote mode: use elegant quote layout
@@ -209,10 +184,37 @@ async def main():
                             )
                             logger.info("💬 Quote mode active (elegant layout)")
 
+                    case "poetry":
+                        # Poetry mode: use elegant vertical layout
+                        if not data.get("quote"):
+                            logger.warning(
+                                "Poetry mode enabled but no poetry found, falling back to dashboard"
+                            )
+                            image = layout.create_image(epd.width, epd.height, data)
+                        else:
+                            from src.poetry_layout import PoetryLayout
+
+                            poetry_layout = PoetryLayout()
+                            image = poetry_layout.create_poetry_image(
+                                epd.width, epd.height, data["quote"]
+                            )
+                            logger.info("📜 Poetry mode active (vertical layout)")
+
+                    case "wallpaper":
+                        # Wallpaper mode: generate wallpaper image
+                        from src.wallpaper import WallpaperManager
+
+                        wallpaper_manager = WallpaperManager()
+                        wallpaper_name = (
+                            Config.display.wallpaper_name if Config.display.wallpaper_name else None
+                        )
+                        image = wallpaper_manager.create_wallpaper(
+                            epd.width, epd.height, wallpaper_name
+                        )
+                        logger.info(f"🎨 Wallpaper mode: {wallpaper_name or 'random'}")
+
                     case _:
-                        # Default: Dashboard mode
-                        image = layout.create_image(epd.width, epd.height, data)
-                        logger.info("📊 Dashboard mode active")
+                        logger.warning(f"Unknown display mode: {display_mode}")
 
                 if Config.hardware.is_screenshot_mode:
                     # 截图模式：保存到文件（使用模式特定的文件名）
