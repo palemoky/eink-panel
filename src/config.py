@@ -240,20 +240,23 @@ class TODOConfig(BaseModel):
         )
 
 
+# Default path constants
+DEFAULT_FONT_PATH = str(BASE_DIR / "resources/fonts/WaveShare.ttc")
+DEFAULT_DATA_DIR = BASE_DIR / "data"
+
+
 class PathConfig(BaseModel):
     """File paths and directories."""
 
-    font_path: str = Field(
-        default=str(BASE_DIR / "resources" / "Font.ttc"), description="Font file path"
-    )
-    data_dir: Path = Field(default=BASE_DIR / "data", description="Data directory")
+    font_path: str = Field(default=DEFAULT_FONT_PATH, description="Font file path")
+    data_dir: Path = Field(default=DEFAULT_DATA_DIR, description="Data directory")
 
     @classmethod
     def from_env(cls) -> "PathConfig":
         """Load configuration from environment variables."""
         return cls(
-            font_path=os.getenv("FONT_PATH", str(BASE_DIR / "resources" / "Font.ttc")),
-            data_dir=Path(os.getenv("DATA_DIR", str(BASE_DIR / "data"))),
+            font_path=os.getenv("FONT_PATH", DEFAULT_FONT_PATH),
+            data_dir=Path(os.getenv("DATA_DIR", str(DEFAULT_DATA_DIR))),
         )
 
 

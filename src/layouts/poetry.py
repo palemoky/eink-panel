@@ -1,15 +1,23 @@
 """Poetry layout for displaying Chinese poetry in traditional vertical format.
 
 Creates elegant vertical (竖排) right-to-left poetry display with decorative elements.
+Supports intelligent layout for different poetry types and title formats.
 """
 
 import logging
+import math
+import os
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
+from ..config import BASE_DIR
 from ..renderer.dashboard import DashboardRenderer
 
 logger = logging.getLogger(__name__)
+
+# Font paths
+POETRY_FONT = str(BASE_DIR / "resources/fonts/LXGWWenKai-Regular.ttf")
+SEAL_FONT = str(BASE_DIR / "resources/fonts/WangHanZong-Lishu.ttf")
 
 
 class PoetryLayout:
@@ -18,9 +26,11 @@ class PoetryLayout:
     def __init__(self):
         """Initialize poetry layout with renderer."""
         self.renderer = DashboardRenderer()
+        self.font_path = POETRY_FONT
+        self.seal_font_path = SEAL_FONT if os.path.exists(SEAL_FONT) else POETRY_FONT
 
     def create_poetry_image(self, width: int, height: int, poetry: dict) -> Image.Image:
-        """Create elegant vertical poetry image.
+        """Create elegant vertical poetry image with intelligent layout.
 
         Args:
             width: Display width in pixels
@@ -42,100 +52,204 @@ class PoetryLayout:
         author = poetry.get("author", "")
         source = poetry.get("source", "")
 
-        # Split content into lines (handle \n in poetry)
-        lines = content.split("\n")
+        # Split content into lines
+        lines = content.replace("\\n", "\n").split("\n")
         lines = [line.strip() for line in lines if line.strip()]
 
-        # Calculate layout
-        margin = 40
-        column_spacing = 80  # Space between columns
-        char_spacing = 10  # Space between characters in a column
+        # ============ 智能分析引擎 ============
 
-        # Font sizes
-        content_font_size = 48
-        meta_font_size = 32
-
-        # Calculate starting position (right side)
-        current_x = width - margin
-
-        # Draw each line as a vertical column (right to left)
-        for line in lines:
-            if not line:
-                continue
-
-            # Calculate column height
-            column_height = len(line) * (content_font_size + char_spacing)
-            start_y = (height - column_height) // 2
-
-            # Draw each character vertically
-            for i, char in enumerate(line):
-                char_y = start_y + i * (content_font_size + char_spacing)
-
-                # Calculate character width for right alignment
-                try:
-                    bbox = draw.textbbox((0, 0), char, font=self.renderer.font_l)
-                    char_width = bbox[2] - bbox[0]
-                except AttributeError:
-                    char_width, _ = draw.textsize(char, font=self.renderer.font_l)
-
-                # Draw character (right-aligned)
-                self.renderer.draw_text(
-                    draw,
-                    current_x - char_width,
-                    char_y,
-                    char,
-                    self.renderer.font_l,
-                )
-
-            # Move to next column (leftward)
-            current_x -= column_spacing
-
-        # Draw decorative separator line
-        separator_x = current_x + column_spacing // 2
-        separator_y_start = height // 4
-        separator_y_end = height * 3 // 4
-        draw.line(
-            [(separator_x, separator_y_start), (separator_x, separator_y_end)],
-            fill=0,
-            width=2,
+        # A. 分析诗句
+        line_count = len(lines)
+        max_line_len = max(
+            [
+                len(line.replace("，", "").replace("。", "").replace("？", "").replace("！", ""))
+                for line in lines
+            ]
         )
 
-        # Draw author and source (vertical, on the left side)
-        meta_x = margin + 30
-        meta_start_y = height // 3
+        # B. 分析标题
+        title_mode = 0  # 0: 普通短标题, 1: 词牌名(带·), 2: 超长标题
+        main_title = source
+        sub_title = ""
 
-        # Draw source (poem title)
-        if source:
-            source_text = f"《{source}》"
-            for i, char in enumerate(source_text):
-                char_y = meta_start_y + i * (meta_font_size + 8)
-                self.renderer.draw_text(
-                    draw,
-                    meta_x,
-                    char_y,
-                    char,
-                    self.renderer.font_value,
-                )
+        if "·" in source or "・" in source:
+            title_mode = 1
+            parts = source.replace("・", "·").split("·")
+            main_title = parts[0]
+            sub_title = parts[1] if len(parts) > 1 else ""
+        elif len(source) > 7:
+            title_mode = 2
+            mid = math.ceil(len(source) / 2)
+            main_title = source[:mid]
+            sub_title = source[mid:]
 
-        # Draw author
-        if author:
-            author_x = meta_x + 50
-            author_start_y = meta_start_y + len(source_text) * (meta_font_size + 8) + 30
-            for i, char in enumerate(author):
-                char_y = author_start_y + i * (meta_font_size + 8)
-                self.renderer.draw_text(
-                    draw,
-                    author_x,
-                    char_y,
-                    char,
-                    self.renderer.font_value,
-                )
+        logger.info(f"布局分析: {line_count}行诗, 最长{max_line_len}字, 标题模式:{title_mode}")
 
-        # Draw decorative corner elements
+        # C. 动态参数配置
+        cfg = {
+            "text_size": 50,
+            "text_spacing": 20,
+            "col_spacing": 90,
+            "group_spacing": 120,
+            "margin_top": 60,
+            "main_title_size": 70,
+            "sub_title_size": 30,
+            "title_gap": 25,
+        }
+
+        # 针对长标题模式的调整
+        if title_mode == 2:
+            cfg["main_title_size"] = 55
+            cfg["sub_title_size"] = 55
+            cfg["title_gap"] = 65
+
+        # 针对七言/律诗的调整
+        if max_line_len >= 7:
+            cfg["text_size"] = 40
+            cfg["text_spacing"] = 12
+            cfg["margin_top"] = 40
+
+        if line_count > 4:
+            cfg["col_spacing"] = 65
+            cfg["group_spacing"] = 90
+            if max_line_len >= 7:
+                cfg["col_spacing"] = 60
+
+        # ============ 绘制标题组 ============
+
+        try:
+            text_font = ImageFont.truetype(self.font_path, cfg["text_size"])
+            main_font = ImageFont.truetype(self.font_path, cfg["main_title_size"])
+            sub_font = ImageFont.truetype(self.font_path, cfg["sub_title_size"])
+        except Exception as e:
+            logger.warning(f"字体加载失败: {e}, 使用默认字体")
+            text_font = self.renderer.font_l
+            main_font = self.renderer.font_xl
+            sub_font = self.renderer.font_value
+
+        # 1. 计算主标题位置 (最右侧)
+        right_margin = 60 if line_count > 4 else 100
+        x_main = width - right_margin - cfg["main_title_size"]
+
+        # 绘制主标题
+        y_curr = cfg["margin_top"]
+        for char in main_title:
+            draw.text((x_main, y_curr), char, font=main_font, fill=0)
+            y_curr += cfg["main_title_size"] + 10
+
+        main_end_y = y_curr
+
+        # 2. 绘制副标题/第二列标题 (如有)
+        title_left_edge = x_main
+        seal_anchor_x = x_main
+        seal_anchor_y = main_end_y
+
+        if sub_title:
+            x_sub = x_main - cfg["sub_title_size"] - cfg["title_gap"]
+
+            if title_mode == 1:  # 词牌模式：下沉错落
+                start_y = cfg["margin_top"] + 80
+            else:  # 长题模式：平齐或微调
+                start_y = cfg["margin_top"]
+                if len(sub_title) < len(main_title):
+                    start_y += 30
+
+            # 防触底逻辑
+            sub_height = len(sub_title) * (cfg["sub_title_size"] + 10)
+            if start_y + sub_height > height - 30:
+                start_y = height - 30 - sub_height
+
+            y_curr = start_y
+            for char in sub_title:
+                draw.text((x_sub, y_curr), char, font=sub_font, fill=0)
+                y_curr += cfg["sub_title_size"] + 10
+
+            title_left_edge = x_sub
+            seal_anchor_x = x_sub
+            seal_anchor_y = y_curr
+
+        # 3. 绘制印章
+        seal_size = int((cfg["sub_title_size"] if sub_title else cfg["main_title_size"]) * 0.9)
+        if seal_size > 60:
+            seal_size = 60
+        if seal_size < 30:
+            seal_size = 30
+
+        self._draw_seal(draw, author, seal_anchor_x, seal_anchor_y + 25, seal_size)
+
+        # ============ 绘制正文 ============
+
+        current_x = title_left_edge - cfg["group_spacing"]
+        poem_start_y = cfg["margin_top"] + 50
+        if max_line_len >= 7:
+            poem_start_y = cfg["margin_top"] + 30
+
+        for line in lines:
+            y_curr = poem_start_y
+            for char in line:
+                if char in "，。？！":
+                    offset = cfg["text_size"] * 0.25
+                    draw.text(
+                        (current_x + offset / 2, y_curr - offset), char, font=text_font, fill=0
+                    )
+                else:
+                    draw.text((current_x, y_curr), char, font=text_font, fill=0)
+                y_curr += cfg["text_size"] + cfg["text_spacing"]
+            current_x -= cfg["col_spacing"]
+
+        # ============ 绘制四角装饰 ============
         self._draw_decorative_corners(draw, width, height)
 
         logger.info(f"Created vertical poetry layout: {author} - {source}")
         return image
+
+    def _draw_seal(self, draw: ImageDraw.Draw, name: str, x: int, y: int, size: int):
+        """Draw traditional Chinese seal (印章).
+
+        Args:
+            draw: PIL ImageDraw object
+            name: Author name
+            x: X coordinate
+            y: Y coordinate
+            size: Seal size in pixels
+        """
+        # 绘制印章外框
+        draw.rectangle([x, y, x + size, y + size], outline=0, width=2)
+
+        # 准备印章文字
+        clean_name = name.strip()
+        if len(clean_name) == 2:
+            txt = clean_name + "之印"
+        elif len(clean_name) == 3:
+            txt = clean_name + "印"
+        else:
+            txt = clean_name[:4]
+
+        try:
+            font = ImageFont.truetype(self.seal_font_path, int(size * 0.45))
+        except Exception:
+            font = self.renderer.font_s
+
+        # 四个字的位置 (右上、右下、左上、左下)
+        quarter = size / 4
+        centers = [
+            (x + size / 2 + quarter, y + size / 2 - quarter),  # 右上
+            (x + size / 2 + quarter, y + size / 2 + quarter),  # 右下
+            (x + size / 2 - quarter, y + size / 2 - quarter),  # 左上
+            (x + size / 2 - quarter, y + size / 2 + quarter),  # 左下
+        ]
+
+        chars = list(txt)
+        for i, char in enumerate(chars):
+            if i >= 4:
+                break
+            try:
+                bbox = draw.textbbox((0, 0), char, font=font)
+                w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            except Exception:
+                w, h = 20, 20
+
+            draw.text((centers[i][0] - w / 2, centers[i][1] - h / 2 - 2), char, font=font, fill=0)
 
     def _draw_decorative_corners(self, draw: ImageDraw.Draw, width: int, height: int):
         """Draw decorative corner elements for traditional aesthetic.
