@@ -117,10 +117,10 @@ class PoetryLayout:
         if title_mode == 2:
             cfg["main_title_size"] = 55
             cfg["sub_title_size"] = 55
-            cfg["title_gap"] = 65
+            cfg["title_gap"] = 10
 
-        # 针对七言/律诗的调整
-        if max_line_len >= 7:
+        # 针对七言/律诗或多行诗(如十句)的调整
+        if max_line_len >= 7 or line_count > 10:
             cfg["text_size"] = 40
             cfg["text_spacing"] = 12
             cfg["margin_top"] = 40
@@ -128,7 +128,11 @@ class PoetryLayout:
         if line_count > 4:
             cfg["col_spacing"] = 65
             cfg["group_spacing"] = 90
-            if max_line_len >= 7:
+            # 如果是8-10行的5言诗，保持大字号但需收紧行距以防宽度溢出
+            if max_line_len < 7 and 8 <= line_count <= 10:
+                cfg["col_spacing"] = 55  # 收紧列间距
+            # 针对小字号模式(7言或>10行)的间距设置
+            elif max_line_len >= 7 or line_count > 10:
                 cfg["col_spacing"] = 60
 
         # ============ 绘制标题组 ============
@@ -197,7 +201,7 @@ class PoetryLayout:
 
         current_x = title_left_edge - cfg["group_spacing"]
         poem_start_y = cfg["margin_top"] + 50
-        if max_line_len >= 7:
+        if max_line_len >= 7 or line_count >= 8:
             poem_start_y = cfg["margin_top"] + 30
 
         for line in lines:
@@ -274,7 +278,7 @@ class PoetryLayout:
 
         # Top-right corner
         draw.line(
-            [(width - corner_size, 20), (width - 20, 20)],
+            [(width - 20 - corner_size, 20), (width - 20, 20)],
             fill=0,
             width=line_width,
         )
@@ -298,7 +302,7 @@ class PoetryLayout:
 
         # Bottom-right corner
         draw.line(
-            [(width - corner_size, height - 20), (width - 20, height - 20)],
+            [(width - 20 - corner_size, height - 20), (width - 20, height - 20)],
             fill=0,
             width=line_width,
         )
