@@ -52,9 +52,21 @@ class PoetryLayout:
         author = poetry.get("author", "")
         source = poetry.get("source", "")
 
-        # Split content into lines
-        lines = content.replace("\\n", "\n").split("\n")
-        lines = [line.strip() for line in lines if line.strip()]
+        # Process content: split by newlines and commas, remove punctuation
+        raw_lines = content.replace("\\n", "\n").split("\n")
+        lines = []
+        for line in raw_lines:
+            line = line.strip()
+            if not line:
+                continue
+            # Split by comma and period to separate clauses
+            clauses = line.replace("。", "，").split("，")
+            for clause in clauses:
+                clause = clause.strip()
+                # Remove all punctuation marks
+                clause = clause.replace("？", "").replace("！", "").replace("、", "")
+                if clause:
+                    lines.append(clause)
 
         # ============ 智能分析引擎 ============
 
@@ -187,13 +199,7 @@ class PoetryLayout:
         for line in lines:
             y_curr = poem_start_y
             for char in line:
-                if char in "，。？！":
-                    offset = cfg["text_size"] * 0.25
-                    draw.text(
-                        (current_x + offset / 2, y_curr - offset), char, font=text_font, fill=0
-                    )
-                else:
-                    draw.text((current_x, y_curr), char, font=text_font, fill=0)
+                draw.text((current_x, y_curr), char, font=text_font, fill=0)
                 y_curr += cfg["text_size"] + cfg["text_spacing"]
             current_x -= cfg["col_spacing"]
 

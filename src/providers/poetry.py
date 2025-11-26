@@ -150,11 +150,10 @@ class PoetryProvider:
         if data["status"] != "success":
             raise ValueError(f"API returned error: {data}")
 
-        poem_data = data["data"]
-        origin = poem_data.get("origin", {})
+        origin = data["data"].get("origin", {})
 
         return {
-            "content": poem_data["content"],
+            "content": origin["content"],
             "author": origin.get("author", "Unknown"),
             "source": origin.get("title", ""),
             "type": "poetry",
