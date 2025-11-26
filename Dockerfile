@@ -1,11 +1,5 @@
 # syntax=docker/dockerfile:1
 
-# Stage 0: Downloader
-FROM alpine/git AS downloader
-WORKDIR /tmp
-# Clone 官方仓库 (只拉取最新版，减少体积)
-RUN git clone --depth 1 https://github.com/waveshareteam/e-Paper.git
-
 # Stage 1: Builder
 FROM python:3.14-slim AS builder
 
@@ -54,16 +48,8 @@ COPY --from=builder /install /usr/local
 # RUN useradd -m appuser
 # USER appuser
 
-# 复制源代码
+# 复制源代码 (包括 src/lib/waveshare_epd/epd7in5_V2.py)
 COPY . .
-
-# 从 Downloader 阶段复制官方驱动到 src/lib/waveshare_epd
-# 注意：不覆盖 epdconfig.py（包含 Docker 兼容性修复），只复制驱动实现
-# COPY --from=downloader /tmp/e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epdconfig.py src/lib/waveshare_epd/
-COPY --from=downloader /tmp/e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epd7in5_V2.py src/lib/waveshare_epd/
-COPY --from=downloader /tmp/e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd/__init__.py src/lib/waveshare_epd/
-
-COPY --from=downloader /tmp/e-Paper/RaspberryPi_JetsonNano/python/pic/Font.ttc resources/
 
 # 环境变量
 ENV PYTHONPATH=/app
