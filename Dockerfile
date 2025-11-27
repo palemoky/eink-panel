@@ -69,5 +69,5 @@ ENV DISPLAY_MODE=dashboard
 RUN mkdir -p /app/data && chown -R root:root /app/data
 VOLUME /app/data
 
-# 启动命令 (使用入口点)
-CMD ["eink-dashboard"]
+# 启动命令
+CMD ["python", "-m", "src.main"]
