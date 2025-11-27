@@ -9,6 +9,7 @@ import logging
 import os
 import signal
 import sys
+from typing import Any
 
 import httpx
 import pendulum
@@ -49,7 +50,7 @@ DEFAULT_RANDOM_WALLPAPER_INTERVAL = 3600  # Default interval for random wallpape
 _driver = None
 
 
-def signal_handler(signum, frame):
+def signal_handler(signum: int, frame: Any) -> None:
     """Handle SIGTERM/SIGINT signals for graceful shutdown."""
     logger.info(f"\n🛑 Received signal {signum}, shutting down gracefully...")
     if _driver:
@@ -67,7 +68,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
 
-def is_in_quiet_hours():
+def is_in_quiet_hours() -> tuple[bool, int]:
     """Check if current time is within quiet hours and return sleep duration.
 
     Returns:
@@ -218,7 +219,7 @@ def generate_image(display_mode: str, data: dict, epd, layout) -> Image.Image:
             return layout.create_image(epd.width, epd.height, data)
 
 
-def update_display(epd, image: Image.Image, display_mode: str):
+def update_display(epd: Any, image: Image.Image, display_mode: str) -> None:
     """Update the E-Ink display with the generated image.
 
     Args:
@@ -237,6 +238,35 @@ def update_display(epd, image: Image.Image, display_mode: str):
     epd.init()
     epd.display(image)
     epd.sleep()
+
+
+def get_display_mode(now: pendulum.DateTime) -> str:
+    """Determine the display mode based on current date and configuration.
+    
+    Priority order:
+    1. Holiday (if today is a configured holiday)
+    2. Year-end summary (if today is Dec 31st)
+    3. Configured display mode
+    
+    Args:
+        now: Current datetime
+        
+    Returns:
+        Display mode string
+    """
+    from src.holiday import HolidayManager
+    
+    # Check for holiday first (highest priority)
+    holiday_manager = HolidayManager()
+    if holiday_manager.get_holiday():
+        return "holiday"
+    
+    # Check for year-end (Dec 31st)
+    if now.month == 12 and now.day == 31:
+        return "year_end"
+    
+    # Use configured display mode
+    return Config.display.mode.lower()
 
 
 async def handle_quiet_hours(config_changed: asyncio.Event) -> bool:
@@ -265,6 +295,96 @@ async def handle_quiet_hours(config_changed: asyncio.Event) -> bool:
     return False
 
 
+async def fetch_display_data(display_mode: str, dashboard: "Dashboard") -> dict[str, Any]:
+    """Fetch data based on display mode.
+    
+    Args:
+        display_mode: Current display mode
+        dashboard: Dashboard instance for data fetching
+        
+    Returns:
+        Dictionary containing fetched data
+    """
+    match display_mode:
+        case "dashboard":
+            return await dashboard.fetch_dashboard_data()
+        
+        case "year_end":
+            data = await dashboard.fetch_year_end_data()
+            # Special handling: if year_end mode but no data, fallback to dashboard
+            if not data.get("github_year_summary"):
+                logger.warning("Year-end mode but no data, falling back to dashboard")
+                return await dashboard.fetch_dashboard_data()
+            return data
+        
+        case "quote":
+            from src.providers.quote import get_quote
+            async with httpx.AsyncClient() as client:
+                quote = await get_quote(client)
+                return {"quote": quote}
+        
+        case "poetry":
+            from src.providers.poetry import get_poetry
+            async with httpx.AsyncClient() as client:
+                poetry = await get_poetry(client)
+                return {"poetry": poetry}
+        
+        case _:
+            # For holiday, wallpaper, and other modes that don't need data
+            return {}
+
+
+def _log_startup_info() -> None:
+    """Log startup information about configuration."""
+    logger.info("Starting E-Ink Panel Dashboard...")
+    logger.info(f"Default refresh interval: {Config.hardware.refresh_interval}s")
+    logger.info(
+        f"Mode-specific intervals: Dashboard={Config.display.refresh_interval_dashboard}s, "
+        f"Quote={Config.display.refresh_interval_quote}s, Poetry={Config.display.refresh_interval_poetry}s, "
+        f"Wallpaper={Config.display.refresh_interval_wallpaper}s"
+    )
+    logger.info(
+        f"Quiet hours: {Config.hardware.quiet_start_hour}:00 - {Config.hardware.quiet_end_hour}:00"
+    )
+
+
+async def wait_for_refresh(
+    refresh_interval: int, config_changed: asyncio.Event
+) -> bool:
+    """Wait for next refresh or config change event.
+    
+    Args:
+        refresh_interval: Seconds to wait before next refresh (0 = wait indefinitely)
+        config_changed: Event to signal config reload
+        
+    Returns:
+        True if triggered by config change, False if triggered by timeout
+    """
+    if refresh_interval == 0:
+        logger.info("✅ Display updated | Auto-refresh disabled for this mode")
+        logger.info("💤 Entering sleep mode. Waiting for config change to refresh...")
+        await config_changed.wait()
+        config_changed.clear()
+        logger.info("⚡ Refresh triggered by config change")
+        return True
+    
+    # Calculate and log next refresh time
+    next_refresh = pendulum.now(Config.hardware.timezone).add(seconds=refresh_interval)
+    logger.info(
+        f"✅ Display updated | Refresh interval: {refresh_interval}s | "
+        f"Next refresh: {next_refresh.format('HH:mm:ss')}"
+    )
+    
+    # Wait for either refresh interval or config change event
+    try:
+        await asyncio.wait_for(config_changed.wait(), timeout=refresh_interval)
+        config_changed.clear()
+        logger.info("⚡ Immediate refresh triggered by config change")
+        return True
+    except asyncio.TimeoutError:
+        return False
+
+
 async def main():
     """Main application entry point."""
     global _driver
@@ -276,16 +396,7 @@ async def main():
         logger.error(str(e))
         return
 
-    logger.info("Starting E-Ink Panel Dashboard...")
-    logger.info(f"Default refresh interval: {Config.hardware.refresh_interval}s")
-    logger.info(
-        f"Mode-specific intervals: Dashboard={Config.display.refresh_interval_dashboard}s, "
-        f"Quote={Config.display.refresh_interval_quote}s, Poetry={Config.display.refresh_interval_poetry}s, "
-        f"Wallpaper={Config.display.refresh_interval_wallpaper}s"
-    )
-    logger.info(
-        f"Quiet hours: {Config.hardware.quiet_start_hour}:00 - {Config.hardware.quiet_end_hour}:00"
-    )
+    _log_startup_info()
 
     # Event to signal config reload and trigger immediate refresh
     config_changed = asyncio.Event()
@@ -326,83 +437,24 @@ async def main():
 
                 logger.info(f"Refreshing at {current_time}")
 
-                # Determine display mode (holiday and year-end have highest priority)
-                from src.holiday import HolidayManager
-
-                holiday_manager = HolidayManager()
-                holiday = holiday_manager.get_holiday()
-
-                # Check for special modes first
-                if holiday:
-                    display_mode = "holiday"
-                else:
-                    # Check for year-end (Dec 31st)
-                    if now.month == 12 and now.day == 31:
-                        display_mode = "year_end"
-                    else:
-                        display_mode = Config.display.mode.lower()
-
+                # Determine display mode (priority: holiday > year_end > configured mode)
+                display_mode = get_display_mode(now)
                 logger.info(f"Current display mode: {display_mode}")
 
                 # Fetch data based on determined mode
-                data = {}
-
-                if display_mode == "dashboard":
-                    data = await dm.fetch_dashboard_data()
-
-                elif display_mode == "year_end":
-                    data = await dm.fetch_year_end_data()
-                    # Special handling: if year_end mode but no data, fallback to dashboard
-                    if not data.get("github_year_summary"):
-                        logger.warning("Year-end mode but no data, falling back to dashboard")
-                        display_mode = "dashboard"
-                        data = await dm.fetch_dashboard_data()
-
-                elif display_mode == "quote":
-                    from src.providers.quote import get_quote
-
-                    async with httpx.AsyncClient() as client:
-                        data["quote"] = await get_quote(client)
-
-                elif display_mode == "poetry":
-                    from src.providers.poetry import get_poetry
-
-                    async with httpx.AsyncClient() as client:
-                        data["poetry"] = await get_poetry(client)
+                data = await fetch_display_data(display_mode, dm)
+                
+                # Update display_mode if fallback occurred in year_end mode
+                if display_mode == "year_end" and not data.get("github_year_summary"):
+                    display_mode = "dashboard"
 
                 # Generate and display image
                 image = generate_image(display_mode, data, epd, layout)
                 update_display(epd, image, display_mode)
 
-                # Get mode-specific refresh interval
+                # Wait for next refresh or config change
                 refresh_interval = get_refresh_interval(display_mode)
-
-                # Check if refresh is disabled (0 = no refresh)
-                if refresh_interval == 0:
-                    logger.info("✅ Display updated | Auto-refresh disabled for this mode")
-                    logger.info("💤 Entering sleep mode. Waiting for config change to refresh...")
-                    # Wait indefinitely for config change
-                    await config_changed.wait()
-                    config_changed.clear()
-                    logger.info("⚡ Refresh triggered by config change")
-                    continue
-
-                # Calculate and log next refresh time
-                next_refresh = pendulum.now(Config.hardware.timezone).add(seconds=refresh_interval)
-                logger.info(
-                    f"✅ Display updated | Refresh interval: {refresh_interval}s | "
-                    f"Next refresh: {next_refresh.format('HH:mm:ss')}"
-                )
-
-                # Wait for either refresh interval or config change event
-                try:
-                    await asyncio.wait_for(config_changed.wait(), timeout=refresh_interval)
-                    # Config changed, clear the event and refresh immediately
-                    config_changed.clear()
-                    logger.info("⚡ Immediate refresh triggered by config change")
-                except asyncio.TimeoutError:
-                    # Normal timeout, continue to next iteration
-                    pass
+                await wait_for_refresh(refresh_interval, config_changed)
 
         except KeyboardInterrupt:
             logger.info("Exiting...")
