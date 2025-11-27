@@ -242,29 +242,29 @@ def update_display(epd: Any, image: Image.Image, display_mode: str) -> None:
 
 def get_display_mode(now: pendulum.DateTime) -> str:
     """Determine the display mode based on current date and configuration.
-    
+
     Priority order:
     1. Holiday (if today is a configured holiday)
     2. Year-end summary (if today is Dec 31st)
     3. Configured display mode
-    
+
     Args:
         now: Current datetime
-        
+
     Returns:
         Display mode string
     """
     from src.holiday import HolidayManager
-    
+
     # Check for holiday first (highest priority)
     holiday_manager = HolidayManager()
     if holiday_manager.get_holiday():
         return "holiday"
-    
+
     # Check for year-end (Dec 31st)
     if now.month == 12 and now.day == 31:
         return "year_end"
-    
+
     # Use configured display mode
     return Config.display.mode.lower()
 
@@ -297,18 +297,18 @@ async def handle_quiet_hours(config_changed: asyncio.Event) -> bool:
 
 async def fetch_display_data(display_mode: str, dashboard: "Dashboard") -> dict[str, Any]:
     """Fetch data based on display mode.
-    
+
     Args:
         display_mode: Current display mode
         dashboard: Dashboard instance for data fetching
-        
+
     Returns:
         Dictionary containing fetched data
     """
     match display_mode:
         case "dashboard":
             return await dashboard.fetch_dashboard_data()
-        
+
         case "year_end":
             data = await dashboard.fetch_year_end_data()
             # Special handling: if year_end mode but no data, fallback to dashboard
@@ -316,19 +316,21 @@ async def fetch_display_data(display_mode: str, dashboard: "Dashboard") -> dict[
                 logger.warning("Year-end mode but no data, falling back to dashboard")
                 return await dashboard.fetch_dashboard_data()
             return data
-        
+
         case "quote":
             from src.providers.quote import get_quote
+
             async with httpx.AsyncClient() as client:
                 quote = await get_quote(client)
                 return {"quote": quote}
-        
+
         case "poetry":
             from src.providers.poetry import get_poetry
+
             async with httpx.AsyncClient() as client:
                 poetry = await get_poetry(client)
                 return {"poetry": poetry}
-        
+
         case _:
             # For holiday, wallpaper, and other modes that don't need data
             return {}
@@ -348,15 +350,13 @@ def _log_startup_info() -> None:
     )
 
 
-async def wait_for_refresh(
-    refresh_interval: int, config_changed: asyncio.Event
-) -> bool:
+async def wait_for_refresh(refresh_interval: int, config_changed: asyncio.Event) -> bool:
     """Wait for next refresh or config change event.
-    
+
     Args:
         refresh_interval: Seconds to wait before next refresh (0 = wait indefinitely)
         config_changed: Event to signal config reload
-        
+
     Returns:
         True if triggered by config change, False if triggered by timeout
     """
@@ -367,14 +367,14 @@ async def wait_for_refresh(
         config_changed.clear()
         logger.info("⚡ Refresh triggered by config change")
         return True
-    
+
     # Calculate and log next refresh time
     next_refresh = pendulum.now(Config.hardware.timezone).add(seconds=refresh_interval)
     logger.info(
         f"✅ Display updated | Refresh interval: {refresh_interval}s | "
         f"Next refresh: {next_refresh.format('HH:mm:ss')}"
     )
-    
+
     # Wait for either refresh interval or config change event
     try:
         await asyncio.wait_for(config_changed.wait(), timeout=refresh_interval)
@@ -443,7 +443,7 @@ async def main():
 
                 # Fetch data based on determined mode
                 data = await fetch_display_data(display_mode, dm)
-                
+
                 # Update display_mode if fallback occurred in year_end mode
                 if display_mode == "year_end" and not data.get("github_year_summary"):
                     display_mode = "dashboard"

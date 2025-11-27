@@ -110,7 +110,7 @@ class PoetryProvider:
             time_since_cache = datetime.now() - cached_time
 
             logger.info(
-                f"Poetry cache: age={int(time_since_cache.total_seconds()/60)}min, "
+                f"Poetry cache: age={int(time_since_cache.total_seconds() / 60)}min, "
                 f"max_age={Config.display.quote_cache_hours}h"
             )
 

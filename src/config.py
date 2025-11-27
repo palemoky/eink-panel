@@ -575,8 +575,7 @@ def start_config_watcher():
 
     except ImportError:
         logger.warning(
-            "watchdog not installed, config hot reload disabled. "
-            "Install with: pip install watchdog"
+            "watchdog not installed, config hot reload disabled. Install with: pip install watchdog"
         )
     except Exception as e:
         logger.error(f"Failed to start config watcher: {e}")
