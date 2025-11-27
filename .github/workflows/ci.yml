@@ -37,14 +37,3 @@ jobs:
         run: |
           uv run ruff format --check src/ tests/
           uv run ruff check src/ tests/
-
-      - name: Notify via Xiaomi Speaker
-        if: failure()
-        env:
-          MI_USER: ${{ secrets.MI_USER }}
-          MI_PASS: ${{ secrets.MI_PASS }}
-          MI_BOX_DID: ${{ secrets.MI_BOX_DID }}
-          NOTIFY_MSG: "警报，项目 ${{ github.repository }} 测试失败！"
-        run: |
-          uv pip install --system aiohttp aiofiles miservice
-          python .github/scripts/notify_xiaomi_speaker.py
