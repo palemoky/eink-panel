@@ -73,14 +73,26 @@ class DashboardLayout:
         btc_data = data.get("btc_price", {})
         week_prog = data.get("week_progress", 0)
 
-        # Extract TODO lists
-        self._current_goals = data.get("todo_goals", Config.LIST_GOALS)
-        self._current_must = data.get("todo_must", Config.LIST_MUST)
-        self._current_optional = data.get("todo_optional", Config.LIST_OPTIONAL)
+        # Check rotation state
+        show_hackernews = data.get("show_hackernews", False)
+
+        # Extract TODO lists or Hacker News
+        if show_hackernews:
+            self._current_hackernews = data.get("hackernews", [])
+        else:
+            self._current_goals = data.get("todo_goals", Config.LIST_GOALS)
+            self._current_must = data.get("todo_must", Config.LIST_MUST)
+            self._current_optional = data.get("todo_optional", Config.LIST_OPTIONAL)
 
         # Draw three main sections
         self._draw_header(draw, width, now, weather)
-        self._draw_lists(draw)
+
+        # Draw middle section based on rotation
+        if show_hackernews:
+            self._draw_hackernews(draw, width)
+        else:
+            self._draw_lists(draw)
+
         self._draw_footer(draw, width, commits, vps_data, btc_data, week_prog)
 
         return image
@@ -348,6 +360,72 @@ class DashboardLayout:
         # Draw divider line
         draw.line(
             (30, self.LINE_BOTTOM_Y, draw.im.size[0] - 30, self.LINE_BOTTOM_Y),
+            fill=0,
+            width=2,
+        )
+
+    def _draw_hackernews(self, draw, width):
+        """Draw Hacker News top stories section.
+
+        Args:
+            draw: PIL ImageDraw object
+            width: Canvas width
+        """
+        r = self.renderer
+
+        # Draw header
+        header_text = "Hacker News Top Stories"
+        r.draw_centered_text(
+            draw,
+            width // 2,
+            self.LIST_HEADER_Y,
+            header_text,
+            r.font_m,
+            align_y_center=False,
+        )
+
+        # Get Hacker News stories
+        stories = getattr(self, "_current_hackernews", [])
+
+        # Limit to 5 stories
+        stories = stories[:5]
+
+        # Draw stories
+        for i, story in enumerate(stories):
+            y = self.LIST_START_Y + i * self.LINE_H
+            title = story.get("title", "")
+            score = story.get("score", 0)
+
+            # Format: "1. Title" on left, "123▲" on right
+            left_text = f"{i + 1}. {title}"
+            right_text = f"{score}▲"
+
+            # Calculate available width for title (leave space for score)
+            score_bbox = r.font_s.getbbox(right_text)
+            score_width = score_bbox[2] - score_bbox[0]
+            title_max_width = width - 80 - score_width - 20  # Left margin + score + spacing
+
+            # Draw left-aligned title (truncated)
+            r.draw_truncated_text(
+                draw,
+                40,  # Left margin
+                y,
+                left_text,
+                r.font_s,
+                title_max_width,
+            )
+
+            # Draw right-aligned score
+            draw.text(
+                (width - 40 - score_width, y),  # Right-aligned
+                right_text,
+                font=r.font_s,
+                fill=0,
+            )
+
+        # Draw divider line
+        draw.line(
+            (30, self.LINE_BOTTOM_Y, width - 30, self.LINE_BOTTOM_Y),
             fill=0,
             width=2,
         )

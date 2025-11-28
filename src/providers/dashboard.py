@@ -419,6 +419,10 @@ class Dashboard:
         """Fetch all data required for the main dashboard."""
         logger.info("Fetching dashboard data")
 
+        # Determine rotation state: 0-29 min = Todo, 30-59 min = Hacker News
+        now = pendulum.now(Config.hardware.timezone)
+        show_hackernews = now.minute >= 30
+
         # Initialize data structure
         data = {
             "weather": {},
@@ -429,6 +433,8 @@ class Dashboard:
             "todo_goals": [],
             "todo_must": [],
             "todo_optional": [],
+            "hackernews": [],
+            "show_hackernews": show_hackernews,
         }
 
         # Dashboard mode: fetch all required data concurrently
@@ -462,13 +468,27 @@ class Dashboard:
         # Calculate week progress
         data["week_progress"] = get_week_progress()
 
-        # Fetch TODO lists
-        from .todo import get_todo_lists
+        # Fetch TODO lists or Hacker News based on rotation
+        if show_hackernews:
+            # Fetch Hacker News
+            from .hackernews import get_hackernews
 
-        todo_goals, todo_must, todo_optional = await get_todo_lists()
-        data["todo_goals"] = todo_goals
-        data["todo_must"] = todo_must
-        data["todo_optional"] = todo_optional
+            if self.client:
+                hn_data = await get_hackernews(self.client)
+            else:
+                async with httpx.AsyncClient() as client:
+                    hn_data = await get_hackernews(client)
+            data["hackernews"] = hn_data.get("stories", [])
+            logger.info(f"📰 Showing Hacker News ({len(data['hackernews'])} stories)")
+        else:
+            # Fetch TODO lists
+            from .todo import get_todo_lists
+
+            todo_goals, todo_must, todo_optional = await get_todo_lists()
+            data["todo_goals"] = todo_goals
+            data["todo_must"] = todo_must
+            data["todo_optional"] = todo_optional
+            logger.info("📝 Showing Todo List")
 
         self.save_cache(data)
         return data
