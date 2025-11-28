@@ -80,23 +80,19 @@ async def get_weather(client: httpx.AsyncClient):
 
 
 @retry_strategy
-async def get_github_commits(client: httpx.AsyncClient, mode: str = "day"):
+async def get_github_commits(client: httpx.AsyncClient) -> dict[str, int]:
     """
     Fetch GitHub contributions strictly matching personal homepage.
 
     Args:
         client: httpx.AsyncClient instance
-        mode: "day", "month", or "year"
 
     Returns:
-        int for day mode, or dict for month/year mode:
-        - day: today's contribution count
-        - month: {YYYY-MM: count}
-        - year: {YYYY: count}
+        dict: {"day": int, "month": int, "year": int}
     """
     if not Config.GITHUB_USERNAME or not Config.GITHUB_TOKEN:
         logger.warning("GitHub username or token not configured")
-        return 0 if mode == "day" else {}
+        return {"day": 0, "month": 0, "year": 0}
 
     url = GITHUB_GRAPHQL_URL
     headers = {
@@ -106,12 +102,9 @@ async def get_github_commits(client: httpx.AsyncClient, mode: str = "day"):
 
     # 用户本地时间
     now_local = pendulum.now(Config.hardware.timezone)
-    mode = mode.lower()
 
-    if mode not in ("year", "month", "day"):
-        raise ValueError(f"Unsupported mode: {mode}")
-
-    start_time = now_local.start_of(mode)
+    # Always fetch from start of year to calculate all stats
+    start_time = now_local.start_of("year")
     end_time = now_local
 
     # 转换为 UTC 给 GitHub API
@@ -146,7 +139,7 @@ async def get_github_commits(client: httpx.AsyncClient, mode: str = "day"):
 
         if "errors" in data:
             logger.error(f"GitHub GraphQL Error: {data['errors']}")
-            return 0 if mode == "day" else {}
+            return {"day": 0, "month": 0, "year": 0}
 
         weeks = (
             data.get("data", {})
@@ -162,32 +155,36 @@ async def get_github_commits(client: httpx.AsyncClient, mode: str = "day"):
             for day in week.get("contributionDays", []):
                 daily_counts.append({"date": day["date"], "count": day["contributionCount"]})
 
-        if mode == "day":
-            today_str = now_local.format("YYYY-MM-DD")
-            for d in daily_counts:
-                if d["date"] == today_str:
-                    return d["count"]
-            return 0
+        # Calculate stats
+        today_str = now_local.format("YYYY-MM-DD")
+        month_str = now_local.format("YYYY-MM")
+        year_str = now_local.format("YYYY")
 
-        elif mode == "month":
-            current_month = now_local.format("YYYY-MM")
-            month_total = 0
-            for d in daily_counts:
-                if pendulum.parse(d["date"]).format("YYYY-MM") == current_month:
-                    month_total += d["count"]
-            return month_total
+        day_count = 0
+        month_count = 0
+        year_count = 0
 
-        elif mode == "year":
-            current_year = now_local.format("YYYY")
-            year_total = 0
-            for d in daily_counts:
-                if pendulum.parse(d["date"]).format("YYYY") == current_year:
-                    year_total += d["count"]
-            return year_total
+        for d in daily_counts:
+            date_str = d["date"]
+            count = d["count"]
+
+            # Year total (since we fetched from start of year)
+            if pendulum.parse(date_str).format("YYYY") == year_str:
+                year_count += count
+
+                # Month total
+                if pendulum.parse(date_str).format("YYYY-MM") == month_str:
+                    month_count += count
+
+                    # Day total
+                    if date_str == today_str:
+                        day_count = count
+
+        return {"day": day_count, "month": month_count, "year": year_count}
 
     except Exception as e:
         logger.error(f"GitHub API Error: {e}")
-        return 0 if mode == "day" else {}
+        return {"day": 0, "month": 0, "year": 0}
 
 
 async def check_year_end_summary(client: httpx.AsyncClient):
@@ -443,9 +440,7 @@ class Dashboard:
             async with asyncio.TaskGroup() as tg:
                 tasks = {}
                 tasks["weather"] = tg.create_task(get_weather(self.client))
-                tasks["github"] = tg.create_task(
-                    get_github_commits(self.client, Config.GITHUB_STATS_MODE.lower())
-                )
+                tasks["github"] = tg.create_task(get_github_commits(self.client))
                 tasks["vps"] = tg.create_task(get_vps_info(self.client))
                 tasks["btc"] = tg.create_task(get_btc_data(self.client))
         else:
@@ -453,9 +448,7 @@ class Dashboard:
                 async with asyncio.TaskGroup() as tg:
                     tasks = {}
                     tasks["weather"] = tg.create_task(get_weather(client))
-                    tasks["github"] = tg.create_task(
-                        get_github_commits(client, Config.GITHUB_STATS_MODE.lower())
-                    )
+                    tasks["github"] = tg.create_task(get_github_commits(client))
                     tasks["vps"] = tg.create_task(get_vps_info(client))
                     tasks["btc"] = tg.create_task(get_btc_data(client))
 

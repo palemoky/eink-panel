@@ -152,9 +152,6 @@ class GitHubConfig(BaseModel):
 
     username: str = Field(default="", description="GitHub username")
     token: str = Field(default="", description="GitHub personal access token")
-    stats_mode: Literal["day", "month", "year"] = Field(
-        default="day", description="GitHub stats time range"
-    )
 
     @classmethod
     def from_env(cls) -> "GitHubConfig":
@@ -162,7 +159,6 @@ class GitHubConfig(BaseModel):
         return cls(
             username=os.getenv("GITHUB_USERNAME", ""),
             token=os.getenv("GITHUB_TOKEN", ""),
-            stats_mode=os.getenv("GITHUB_STATS_MODE", "day"),
         )
 
 
@@ -326,10 +322,6 @@ class Settings(BaseModel):
     @property
     def GITHUB_TOKEN(self) -> str:
         return self.github.token
-
-    @property
-    def GITHUB_STATS_MODE(self) -> str:
-        return self.github.stats_mode
 
     @property
     def TODO_SOURCE(self) -> str:

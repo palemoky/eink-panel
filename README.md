@@ -102,7 +102,6 @@ docker-compose up -d
 | `CITY_NAME` | City name for weather | `Beijing` |
 | `GITHUB_USERNAME` | GitHub username for contributions (required) | - |
 | `GITHUB_TOKEN` | GitHub personal access token (required) | - |
-| `GITHUB_STATS_MODE` | GitHub stats mode: `day`, `month`, or `year` | `day` |
 | `VPS_API_KEY` | VPS API key (optional) | - |
 
 ## 🛠️ Local Development

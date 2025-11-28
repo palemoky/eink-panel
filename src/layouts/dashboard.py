@@ -449,19 +449,10 @@ class DashboardLayout:
             f"BTC ({btc_data['usd_24h_change']:+.1f}%)"  # :+ adds a + sign for positive numbers
         )
 
-        # Construct GitHub label
-        mode = Config.GITHUB_STATS_MODE.lower()
-        if mode == "year":
-            commit_label = f"Commits ({datetime.datetime.now().year})"
-        elif mode == "month":
-            commit_label = "Commits (Mo)"
-        else:
-            commit_label = "Commits (Day)"
-
         # Define footer components (restoring old layout: Weekly(Ring), Commits(Text), BTC(Text), VPS(Ring))
         footer_items = [
             {"label": "Weekly", "value": week_prog, "type": "ring"},
-            {"label": commit_label, "value": str(commits), "type": "text"},
+            {"label": "Commits", "value": commits, "type": "text"},
             {"label": btc_label, "value": btc_val, "type": "text"},
             {"label": "VPS Data", "value": vps_data, "type": "ring"},
         ]
@@ -508,12 +499,28 @@ class DashboardLayout:
                 )
             else:
                 # Draw text value
+                value = item["value"]
+
+                # Special handling for GitHub stats (dictionary)
+                if (
+                    isinstance(value, dict)
+                    and "day" in value
+                    and "month" in value
+                    and "year" in value
+                ):
+                    # Format: Day / Month / Year
+                    display_text = f"{value['day']} / {value['month']} / {value['year']}"
+                    font = r.font_m  # Use medium font to fit longer text
+                else:
+                    display_text = str(value)
+                    font = r.font_date_big
+
                 r.draw_centered_text(
                     draw,
                     center_x,
                     self.FOOTER_CENTER_Y,
-                    item["value"],
-                    font=r.font_date_big,
+                    display_text,
+                    font=font,
                     align_y_center=True,
                 )
 
