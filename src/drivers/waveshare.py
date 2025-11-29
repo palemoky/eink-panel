@@ -77,14 +77,40 @@ class WaveshareEPDDriver:
         Use this when you've already converted the image to a buffer for better performance.
 
         Args:
-            buffer: Pre-converted buffer from getbuffer()
+            buffer: Pre-converted buffer from getbuffer() - MUST be full-size image buffer
             x_start: X coordinate of top-left corner
             y_start: Y coordinate of top-left corner
             x_end: X coordinate of bottom-right corner (not width!)
             y_end: Y coordinate of bottom-right corner (not height!)
         """
         if hasattr(self.epd, "display_Partial"):
-            self.epd.display_Partial(buffer, x_start, y_start, x_end, y_end)
+            # Extract the partial region from the full buffer
+            # The Waveshare display_Partial expects a buffer containing only the region data
+            # Buffer format: 1 bit per pixel, packed into bytes (8 pixels per byte)
+
+            # Align X coordinates to 8-pixel boundaries (required by hardware)
+            x_start_aligned = (x_start // 8) * 8
+            x_end_aligned = ((x_end + 7) // 8) * 8
+
+            width_bytes = (x_end_aligned - x_start_aligned) // 8
+
+            # Extract the region from the full buffer
+            partial_buffer = bytearray()
+            full_width_bytes = self.epd.width // 8
+
+            for y in range(y_start, y_end):
+                # Calculate the starting byte position in the full buffer for this row
+                row_start = y * full_width_bytes + (x_start_aligned // 8)
+                row_end = row_start + width_bytes
+                partial_buffer.extend(buffer[row_start:row_end])
+
+            logger.debug(
+                f"Partial refresh: region ({x_start},{y_start})-({x_end},{y_end}), "
+                f"aligned ({x_start_aligned},{y_start})-({x_end_aligned},{y_end}), "
+                f"buffer size: {len(partial_buffer)} bytes"
+            )
+
+            self.epd.display_Partial(partial_buffer, x_start_aligned, y_start, x_end_aligned, y_end)
         else:
             logger.warning(f"Partial display not supported for {self.epd.__class__.__name__}")
 
