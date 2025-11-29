@@ -89,7 +89,7 @@ class HolidayIcons:
         self, draw, width, height, title, message, icon_type=None, font_l=None, font_m=None
     ):
         """Draw full screen message for holiday greetings."""
-        from .text import TextRenderer
+        from ..text import TextRenderer
 
         text_renderer = TextRenderer()
         center_x = width // 2

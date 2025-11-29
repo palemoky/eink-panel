@@ -52,7 +52,9 @@ class TaskManager:
             stop_event = asyncio.Event()
 
             # Create and start task
-            task = asyncio.create_task(coro_func(stop_event, *args, **kwargs), name=name)
+            task: asyncio.Task = asyncio.create_task(
+                coro_func(stop_event, *args, **kwargs), name=name
+            )
             self._tasks[name] = (task, stop_event)
 
             logger.info(f"✅ Started task: {name}")

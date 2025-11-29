@@ -8,7 +8,7 @@ import logging
 import sys
 from typing import Any
 
-import structlog
+import structlog  # type: ignore[import-not-found]
 
 
 def configure_logging(log_level: str = "INFO") -> None:
