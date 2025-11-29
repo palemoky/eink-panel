@@ -97,12 +97,15 @@ async def _fetch_story(client: httpx.AsyncClient, story_id: int) -> dict[str, An
         return None
 
 
-async def get_hackernews(client: httpx.AsyncClient, advance_page: bool = False) -> dict[str, Any]:
+async def get_hackernews(
+    client: httpx.AsyncClient, advance_page: bool = False, reset_to_first: bool = False
+) -> dict[str, Any]:
     """Fetch paginated Hacker News stories.
 
     Args:
         client: HTTP client for making requests
         advance_page: If True, advance to next page
+        reset_to_first: If True, reset to page 1 (useful on startup)
 
     Returns:
         Dictionary with:
@@ -115,6 +118,10 @@ async def get_hackernews(client: httpx.AsyncClient, advance_page: bool = False) 
     # Read state
     state = _read_state()
     current_page = state.get("current_page", 1)
+
+    # Reset to first page if requested
+    if reset_to_first:
+        current_page = 1
 
     # Advance page if requested
     if advance_page:

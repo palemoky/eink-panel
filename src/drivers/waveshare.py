@@ -61,13 +61,14 @@ class WaveshareEPDDriver:
         """Display a partial region of the screen.
 
         Args:
-            image: PIL Image to display (should be cropped to the region)
-            x: X coordinate of top-left corner
-            y: Y coordinate of top-left corner
-            w: Width of the region
-            h: Height of the region
+            image: PIL Image to display (must be FULL SIZE 800x480)
+            x: X coordinate of top-left corner of region to update
+            y: Y coordinate of top-left corner of region to update
+            w: Width of the region to update
+            h: Height of the region to update
         """
         if hasattr(self.epd, "display_Partial"):
+            # EPD expects full-size image buffer and end coordinates
             buffer = self.epd.getbuffer(image)
             self.epd.display_Partial(buffer, x, y, x + w, y + h)
         else:

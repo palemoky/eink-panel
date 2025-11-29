@@ -175,17 +175,26 @@ async def hackernews_pagination_task(epd, layout, dm, stop_event: asyncio.Event)
             # Update layout data
             layout._current_hackernews = hn_data
 
-            # Create partial image for HN region
-            partial_img = Image.new("L", (HN_REGION["w"], HN_REGION["h"]), 255)
-            partial_draw = ImageDraw.Draw(partial_img)
+            # Create FULL-SIZE image (EPD requires full image for partial refresh)
+            full_img = Image.new("L", (epd.width, epd.height), 255)
+            full_draw = ImageDraw.Draw(full_img)
 
-            # Draw HN section
-            layout._draw_hackernews(partial_draw, HN_REGION["w"])
+            # Draw HN section at the correct position
+            layout._draw_hackernews(full_draw, epd.width)
 
-            # Partial refresh
+            # Partial refresh - EPD will only update the specified region
             try:
-                epd.display_partial(
-                    partial_img, HN_REGION["x"], HN_REGION["y"], HN_REGION["w"], HN_REGION["h"]
+                # Need to call init_part before partial refresh
+                if hasattr(epd, "init_part"):
+                    epd.init_part()
+
+                buffer = epd.getbuffer(full_img)
+                epd.display_Partial(
+                    buffer,
+                    HN_REGION["x"],
+                    HN_REGION["y"],
+                    HN_REGION["x"] + HN_REGION["w"],
+                    HN_REGION["y"] + HN_REGION["h"],
                 )
                 logger.debug("✅ HN partial refresh complete")
             except Exception as e:

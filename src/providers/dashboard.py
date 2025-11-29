@@ -462,14 +462,14 @@ class Dashboard:
         # Calculate week progress
         data["week_progress"] = get_week_progress()
 
-        # Fetch initial HackerNews data (will be updated by main loop if needed)
+        # Fetch initial HackerNews data (reset to page 1 on startup)
         from .hackernews import get_hackernews
 
         if self.client:
-            hn_data = await get_hackernews(self.client)
+            hn_data = await get_hackernews(self.client, reset_to_first=True)
         else:
             async with httpx.AsyncClient() as client:
-                hn_data = await get_hackernews(client)
+                hn_data = await get_hackernews(client, reset_to_first=True)
 
         # Store complete pagination data
         data["hackernews"] = hn_data
@@ -477,14 +477,24 @@ class Dashboard:
             f"📰 Fetched HackerNews: Page {hn_data.get('page', 1)}/{hn_data.get('total_pages', 1)}"
         )
 
-        # Also fetch TODO lists (main loop will decide which to show)
-        from .todo import get_todo_lists
+        # Conditionally fetch TODO lists based on time slots
+        # Check if we're in TODO time slot
+        from src.main import is_in_time_slots
 
-        todo_goals, todo_must, todo_optional = await get_todo_lists()
-        data["todo_goals"] = todo_goals
-        data["todo_must"] = todo_must
-        data["todo_optional"] = todo_optional
-        logger.info("📝 Fetched Todo Lists")
+        show_todo = is_in_time_slots(Config.display.todo_time_slots)
+
+        if show_todo:
+            # Only fetch TODO if we're in TODO time slot
+            from .todo import get_todo_lists
+
+            todo_goals, todo_must, todo_optional = await get_todo_lists()
+            data["todo_goals"] = todo_goals
+            data["todo_must"] = todo_must
+            data["todo_optional"] = todo_optional
+            logger.info("📝 Fetched Todo Lists")
+        else:
+            # Use empty lists if not in TODO time slot
+            logger.info("⏭️  Skipping TODO fetch (not in TODO time slot)")
 
         self.save_cache(data)
         return data
