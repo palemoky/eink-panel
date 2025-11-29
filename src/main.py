@@ -176,7 +176,8 @@ async def hackernews_pagination_task(epd, layout, dm, stop_event: asyncio.Event)
             layout._current_hackernews = hn_data
 
             # Create FULL-SIZE image (EPD requires full image for partial refresh)
-            full_img = Image.new("L", (epd.width, epd.height), 255)
+            # Use mode '1' (black and white) to match the display format
+            full_img = Image.new("1", (epd.width, epd.height), 255)
             full_draw = ImageDraw.Draw(full_img)
 
             # Draw HN section at the correct position
@@ -189,6 +190,13 @@ async def hackernews_pagination_task(epd, layout, dm, stop_event: asyncio.Event)
                     epd.init_part()
 
                 buffer = epd.getbuffer(full_img)
+
+                # Log the refresh region for debugging
+                logger.debug(
+                    f"Partial refresh region: x={HN_REGION['x']}, y={HN_REGION['y']}, "
+                    f"x_end={HN_REGION['x'] + HN_REGION['w']}, y_end={HN_REGION['y'] + HN_REGION['h']}"
+                )
+
                 epd.display_partial_buffer(
                     buffer,
                     HN_REGION["x"],
