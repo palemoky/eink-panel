@@ -99,6 +99,107 @@ def is_in_quiet_hours() -> tuple[bool, int]:
     return False, 0
 
 
+def is_in_time_slots(time_slots_str: str) -> bool:
+    """Check if current hour is within the specified time slots.
+
+    Args:
+        time_slots_str: Time slots string (e.g., "0-12,18-24")
+
+    Returns:
+        True if current hour is within any of the time slots
+    """
+    if not time_slots_str:
+        return False
+
+    now = pendulum.now(Config.hardware.timezone)
+    current_hour = now.hour
+
+    # Parse time slots (format: "0-12,18-24")
+    try:
+        slots = time_slots_str.split(",")
+        for slot in slots:
+            slot = slot.strip()
+            if "-" in slot:
+                start, end = map(int, slot.split("-"))
+                if start <= current_hour < end:
+                    return True
+    except Exception as e:
+        logger.warning(f"Failed to parse time slots '{time_slots_str}': {e}")
+        return False
+
+    return False
+
+
+# HackerNews region coordinates (for partial refresh)
+HN_REGION = {
+    "x": 0,
+    "y": 115,  # LIST_HEADER_Y
+    "w": 800,  # Full width
+    "h": 250,  # From LIST_HEADER_Y to LINE_BOTTOM_Y
+}
+
+
+async def hackernews_pagination_task(epd, layout, dm, stop_event: asyncio.Event):
+    """Independent async task for HackerNews page rotation.
+
+    Args:
+        epd: E-Paper Display driver instance
+        layout: DashboardLayout instance
+        dm: Dashboard data manager
+        stop_event: Event to signal task should stop
+    """
+    try:
+        logger.info("🔄 Starting HackerNews pagination task")
+
+        while not stop_event.is_set():
+            # Wait for page duration or stop signal
+            try:
+                await asyncio.wait_for(
+                    stop_event.wait(), timeout=Config.display.hackernews_page_seconds
+                )
+                # If we got here, stop_event was set
+                break
+            except asyncio.TimeoutError:
+                # Timeout is normal - time to advance page
+                pass
+
+            # Fetch next page
+            from src.providers.hackernews import get_hackernews
+
+            hn_data = await get_hackernews(dm.client, advance_page=True)
+            logger.info(
+                f"📰 HN Page {hn_data.get('page', 1)}/{hn_data.get('total_pages', 1)} "
+                f"({hn_data.get('start_idx', 1)}~{hn_data.get('end_idx', 0)})"
+            )
+
+            # Update layout data
+            layout._current_hackernews = hn_data
+
+            # Create partial image for HN region
+            partial_img = Image.new("L", (HN_REGION["w"], HN_REGION["h"]), 255)
+            partial_draw = ImageDraw.Draw(partial_img)
+
+            # Draw HN section
+            layout._draw_hackernews(partial_draw, HN_REGION["w"])
+
+            # Partial refresh
+            try:
+                epd.display_partial(
+                    partial_img, HN_REGION["x"], HN_REGION["y"], HN_REGION["w"], HN_REGION["h"]
+                )
+                logger.debug("✅ HN partial refresh complete")
+            except Exception as e:
+                logger.error(f"Failed to perform partial refresh: {e}")
+
+    except asyncio.CancelledError:
+        logger.info("🛑 HackerNews pagination task cancelled")
+        raise
+    except Exception as e:
+        logger.error(f"Error in HackerNews pagination task: {e}")
+    finally:
+        logger.info("👋 HackerNews pagination task stopped")
+
+
 def get_refresh_interval(display_mode: str) -> int:
     """Get refresh interval based on display mode.
 
@@ -436,6 +537,11 @@ async def main():
             is_first_refresh = True
             last_full_refresh_date = None
 
+            # HackerNews pagination task management
+            hn_task = None
+            hn_stop_event = None
+            last_hn_mode = False  # Track if we were showing HN last iteration
+
             while True:
                 now = pendulum.now(Config.hardware.timezone)
                 current_time = now.to_time_string()
@@ -443,6 +549,17 @@ async def main():
 
                 # Check if in quiet hours
                 if await handle_quiet_hours(config_changed):
+                    # If entering quiet hours, stop HN task
+                    if hn_task and not hn_task.done():
+                        logger.info("⏸️  Stopping HN task for quiet hours")
+                        hn_stop_event.set()
+                        try:
+                            await asyncio.wait_for(hn_task, timeout=2.0)
+                        except asyncio.TimeoutError:
+                            hn_task.cancel()
+                        hn_task = None
+                        hn_stop_event = None
+                        last_hn_mode = False
                     continue
 
                 logger.info(f"Refreshing at {current_time}")
@@ -451,8 +568,43 @@ async def main():
                 display_mode = get_display_mode(now)
                 logger.info(f"Current display mode: {display_mode}")
 
+                # Check if we should show HackerNews (only in dashboard mode)
+                show_hn = False
+                if display_mode == "dashboard":
+                    show_hn = is_in_time_slots(Config.display.hackernews_time_slots)
+
+                # Manage HN pagination task based on time slots
+                if show_hn != last_hn_mode:
+                    # Mode changed
+                    if hn_task and not hn_task.done():
+                        # Stop existing task
+                        logger.info(
+                            f"🔄 Switching from {'HN' if last_hn_mode else 'TODO'} to {'HN' if show_hn else 'TODO'}"
+                        )
+                        hn_stop_event.set()
+                        try:
+                            await asyncio.wait_for(hn_task, timeout=2.0)
+                        except asyncio.TimeoutError:
+                            hn_task.cancel()
+                        hn_task = None
+                        hn_stop_event = None
+
+                    if show_hn:
+                        # Start HN pagination task
+                        logger.info("🚀 Starting HackerNews pagination mode")
+                        hn_stop_event = asyncio.Event()
+                        hn_task = asyncio.create_task(
+                            hackernews_pagination_task(epd, layout, dm, hn_stop_event)
+                        )
+
+                    last_hn_mode = show_hn
+
                 # Fetch data based on determined mode
                 data = await fetch_display_data(display_mode, dm)
+
+                # Add HN display flag to data
+                if display_mode == "dashboard":
+                    data["show_hackernews"] = show_hn
 
                 # Update display_mode if fallback occurred in year_end mode
                 if display_mode == "year_end" and not data.get("github_year_summary"):
@@ -491,6 +643,19 @@ async def main():
         except Exception as e:
             logger.error(f"Critical Error: {e}", exc_info=True)
         finally:
+            # Stop HN pagination task if running
+            if hn_task and not hn_task.done():
+                logger.info("🛑 Stopping HackerNews pagination task...")
+                hn_stop_event.set()
+                try:
+                    await asyncio.wait_for(hn_task, timeout=2.0)
+                except asyncio.TimeoutError:
+                    hn_task.cancel()
+                    try:
+                        await hn_task
+                    except asyncio.CancelledError:
+                        pass
+
             # Stop config watcher on exit
             stop_config_watcher()
 

@@ -365,7 +365,7 @@ class DashboardLayout:
         )
 
     def _draw_hackernews(self, draw, width):
-        """Draw Hacker News top stories section.
+        """Draw Hacker News stories section with pagination support.
 
         Args:
             draw: PIL ImageDraw object
@@ -373,8 +373,25 @@ class DashboardLayout:
         """
         r = self.renderer
 
+        # Get Hacker News data (now includes pagination info)
+        hn_data = getattr(self, "_current_hackernews", {})
+
+        # Support both old format (list) and new format (dict with pagination)
+        if isinstance(hn_data, list):
+            # Old format: just a list of stories
+            stories = hn_data[:5]
+            header_text = "Hacker News Top Stories"
+            start_idx = 1
+        else:
+            # New format: dict with stories, page info, indices
+            stories = hn_data.get("stories", [])
+            start_idx = hn_data.get("start_idx", 1)
+            end_idx = hn_data.get("end_idx", 5)
+
+            # Header with page indicator
+            header_text = f"HN {start_idx}~{end_idx}"
+
         # Draw header
-        header_text = "Hacker News Top Stories"
         r.draw_centered_text(
             draw,
             width // 2,
@@ -384,20 +401,15 @@ class DashboardLayout:
             align_y_center=False,
         )
 
-        # Get Hacker News stories
-        stories = getattr(self, "_current_hackernews", [])
-
-        # Limit to 5 stories
-        stories = stories[:5]
-
         # Draw stories
         for i, story in enumerate(stories):
             y = self.LIST_START_Y + i * self.LINE_H
             title = story.get("title", "")
             score = story.get("score", 0)
 
-            # Format: "1. Title" on left, "123▲" on right
-            left_text = f"{i + 1}. {title}"
+            # Format: "6. Title" on left (using global index), "123▲" on right
+            global_idx = start_idx + i
+            left_text = f"{global_idx}. {title}"
             right_text = f"{score}▲"
 
             # Calculate available width for title (leave space for score)
@@ -524,7 +536,7 @@ class DashboardLayout:
                         center_x - offset_x,
                         self.FOOTER_CENTER_Y - offset_y,
                         str(value["day"]),
-                        font=r.font_m,
+                        font=r.font_xs,
                         align_y_center=True,
                     )
 
@@ -534,7 +546,7 @@ class DashboardLayout:
                         center_x + offset_x,
                         self.FOOTER_CENTER_Y - offset_y,
                         str(value["week"]),
-                        font=r.font_m,
+                        font=r.font_xs,
                         align_y_center=True,
                     )
 
@@ -544,7 +556,7 @@ class DashboardLayout:
                         center_x - offset_x,
                         self.FOOTER_CENTER_Y + offset_y,
                         str(value["month"]),
-                        font=r.font_m,
+                        font=r.font_xs,
                         align_y_center=True,
                     )
 
@@ -554,7 +566,7 @@ class DashboardLayout:
                         center_x + offset_x,
                         self.FOOTER_CENTER_Y + offset_y,
                         str(value["year"]),
-                        font=r.font_m,
+                        font=r.font_xs,
                         align_y_center=True,
                     )
 
@@ -582,12 +594,11 @@ class DashboardLayout:
                         width=1,
                     )
                 else:
-                    display_text = str(value)
                     r.draw_centered_text(
                         draw,
                         center_x,
                         self.FOOTER_CENTER_Y,
-                        display_text,
+                        item["value"],
                         font=r.font_date_big,
                         align_y_center=True,
                     )

@@ -55,6 +55,23 @@ class DisplayConfig(BaseModel):
     refresh_interval_year_end: int = Field(
         default=86400, description="Year-end summary mode refresh interval in seconds", ge=60
     )
+    # HackerNews pagination settings
+    hackernews_refresh_minutes: int = Field(
+        default=60, description="HackerNews cache refresh interval in minutes", ge=1
+    )
+    hackernews_page_seconds: int = Field(
+        default=30, description="HackerNews page display duration in seconds", ge=5
+    )
+    hackernews_stories_per_page: int = Field(
+        default=5, description="Number of stories per page", ge=1, le=50
+    )
+    # Time slots for TODO/HN switching (format: "0-12,18-24" means show during these hours)
+    todo_time_slots: str = Field(
+        default="0-12,18-24", description="Time slots for TODO display (hour ranges)"
+    )
+    hackernews_time_slots: str = Field(
+        default="12-18", description="Time slots for HackerNews display (hour ranges)"
+    )
 
     @classmethod
     def from_env(cls) -> "DisplayConfig":
@@ -69,6 +86,11 @@ class DisplayConfig(BaseModel):
             refresh_interval_wallpaper=int(os.getenv("REFRESH_INTERVAL_WALLPAPER", "0")),
             refresh_interval_holiday=int(os.getenv("REFRESH_INTERVAL_HOLIDAY", "86400")),
             refresh_interval_year_end=int(os.getenv("REFRESH_INTERVAL_YEAR_END", "86400")),
+            hackernews_refresh_minutes=int(os.getenv("HACKERNEWS_REFRESH_MINUTES", "60")),
+            hackernews_page_seconds=int(os.getenv("HACKERNEWS_PAGE_SECONDS", "30")),
+            hackernews_stories_per_page=int(os.getenv("HACKERNEWS_STORIES_PER_PAGE", "5")),
+            todo_time_slots=os.getenv("TODO_TIME_SLOTS", "0-12,18-24"),
+            hackernews_time_slots=os.getenv("HACKERNEWS_TIME_SLOTS", "12-18"),
         )
 
 
