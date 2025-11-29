@@ -83,10 +83,16 @@ class WaveshareEPDDriver:
         Returns:
             Buffer in the format expected by the display
         """
+        # If image is explicitly B/W ("1"), use standard getbuffer
+        if image.mode == "1":
+            return self.epd.getbuffer(image)
+
+        # If image is grayscale ("L") and driver supports it, use grayscale buffer
         if self.use_grayscale and hasattr(self.epd, "getbuffer_4Gray"):
             return self.epd.getbuffer_4Gray(image)
-        else:
-            return self.epd.getbuffer(image)
+
+        # Fallback: convert to B/W buffer
+        return self.epd.getbuffer(image)
 
     def display(self, image: Image.Image) -> None:
         """Display an image on the e-ink screen.

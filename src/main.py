@@ -201,8 +201,8 @@ async def hackernews_pagination_task(epd, layout, dm, stop_event: asyncio.Event)
             # Acquire lock to prevent concurrent refreshes
             async with _refresh_lock:
                 # Create FULL-SIZE image (EPD requires full image for partial refresh)
-                # Use grayscale mode if enabled, otherwise black/white
-                image_mode = "L" if Config.hardware.use_grayscale else "1"
+                # Partial refresh usually requires 1-bit B/W image
+                image_mode = "1"
                 full_img = Image.new(image_mode, (epd.width, epd.height), 255)
                 full_draw = ImageDraw.Draw(full_img)
 
