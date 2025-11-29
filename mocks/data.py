@@ -101,7 +101,7 @@ def get_mock_poetry_data() -> dict:
     return {
         "poetry": {
             "content": "床前明月光，疑是地上霜。举头望明月，低头思故乡。",
-            "origin": "静夜思",
+            "source": "静夜思",
             "author": "李白",
         }
     }

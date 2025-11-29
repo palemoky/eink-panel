@@ -118,7 +118,7 @@ class DashboardRenderer:
         from ..config import Config
 
         # Use grayscale colors if enabled
-        ring_color = self.COLOR_DARK_GRAY if Config.hardware.use_grayscale else 0
+        ring_color = self.COLOR_BLACK if Config.hardware.use_grayscale else 0
         bg_color = self.COLOR_WHITE
 
         bbox = (x - radius, y - radius, x + radius, y + radius)
