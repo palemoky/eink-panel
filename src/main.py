@@ -138,6 +138,10 @@ def is_in_time_slots(time_slots_str: str) -> bool:
     return False
 
 
+# Global lock to prevent concurrent display refreshes
+# Ensures full refresh and partial refresh don't happen simultaneously
+_refresh_lock = asyncio.Lock()
+
 # HackerNews region coordinates (for partial refresh)
 HN_REGION = {
     "x": 0,
@@ -183,39 +187,41 @@ async def hackernews_pagination_task(epd, layout, dm, stop_event: asyncio.Event)
             # Update layout data
             layout._current_hackernews = hn_data
 
-            # Create FULL-SIZE image (EPD requires full image for partial refresh)
-            # Use grayscale mode if enabled, otherwise black/white
-            image_mode = "L" if Config.hardware.use_grayscale else "1"
-            full_img = Image.new(image_mode, (epd.width, epd.height), 255)
-            full_draw = ImageDraw.Draw(full_img)
+            # Acquire lock to prevent concurrent refreshes
+            async with _refresh_lock:
+                # Create FULL-SIZE image (EPD requires full image for partial refresh)
+                # Use grayscale mode if enabled, otherwise black/white
+                image_mode = "L" if Config.hardware.use_grayscale else "1"
+                full_img = Image.new(image_mode, (epd.width, epd.height), 255)
+                full_draw = ImageDraw.Draw(full_img)
 
-            # Draw HN section at the correct position
-            layout._draw_hackernews(full_draw, epd.width)
+                # Draw HN section at the correct position
+                layout._draw_hackernews(full_draw, epd.width)
 
-            # Partial refresh - EPD will only update the specified region
-            try:
-                # Need to call init_part before partial refresh
-                if hasattr(epd, "init_part"):
-                    epd.init_part()
+                # Partial refresh - EPD will only update the specified region
+                try:
+                    # Need to call init_part before partial refresh
+                    if hasattr(epd, "init_part"):
+                        epd.init_part()
 
-                buffer = epd.getbuffer(full_img)
+                    buffer = epd.getbuffer(full_img)
 
-                # Log the refresh region for debugging
-                logger.debug(
-                    f"Partial refresh region: x={HN_REGION['x']}, y={HN_REGION['y']}, "
-                    f"x_end={HN_REGION['x'] + HN_REGION['w']}, y_end={HN_REGION['y'] + HN_REGION['h']}"
-                )
+                    # Log the refresh region for debugging
+                    logger.debug(
+                        f"Partial refresh region: x={HN_REGION['x']}, y={HN_REGION['y']}, "
+                        f"x_end={HN_REGION['x'] + HN_REGION['w']}, y_end={HN_REGION['y'] + HN_REGION['h']}"
+                    )
 
-                epd.display_partial_buffer(
-                    buffer,
-                    HN_REGION["x"],
-                    HN_REGION["y"],
-                    HN_REGION["x"] + HN_REGION["w"],
-                    HN_REGION["y"] + HN_REGION["h"],
-                )
-                logger.debug("✅ HN partial refresh complete")
-            except Exception as e:
-                logger.error(f"Failed to perform partial refresh: {e}")
+                    epd.display_partial_buffer(
+                        buffer,
+                        HN_REGION["x"],
+                        HN_REGION["y"],
+                        HN_REGION["x"] + HN_REGION["w"],
+                        HN_REGION["y"] + HN_REGION["h"],
+                    )
+                    logger.debug("✅ HN partial refresh complete")
+                except Exception as e:
+                    logger.error(f"Failed to perform partial refresh: {e}")
 
     except asyncio.CancelledError:
         logger.info("🛑 HackerNews pagination task cancelled")
@@ -348,8 +354,8 @@ def generate_image(display_mode: str, data: dict, epd, layout) -> Image.Image:
             return layout.create_image(epd.width, epd.height, data)
 
 
-def update_display(
-    epd: Any, image: Image.Image, display_mode: str, use_fast_refresh: bool = False
+async def update_display(
+    epd, image: Image.Image, display_mode: str, use_fast_refresh: bool = False
 ) -> None:
     """Update the E-Ink display with the generated image.
 
@@ -366,12 +372,14 @@ def update_display(
         image.save(screenshot_path)
         logger.info(f"Screenshot saved to {screenshot_path}")
 
-    # Display image on E-Ink screen
-    refresh_mode = "fast" if use_fast_refresh else "full"
-    logger.debug(f"Using {refresh_mode} refresh mode")
-    epd.init(fast=use_fast_refresh)
-    epd.display(image)
-    epd.sleep()
+    # Acquire lock to prevent concurrent refreshes
+    async with _refresh_lock:
+        # Display image on E-Ink screen
+        refresh_mode = "fast" if use_fast_refresh else "full"
+        logger.debug(f"Using {refresh_mode} refresh mode")
+        epd.init(fast=use_fast_refresh)
+        epd.display(image)
+        epd.sleep()
 
 
 def get_display_mode(now: pendulum.DateTime) -> str:
@@ -657,7 +665,7 @@ async def main():
 
                 # Generate and display image
                 image = generate_image(display_mode, data, epd, layout)
-                update_display(epd, image, display_mode, use_fast_refresh)
+                await update_display(epd, image, display_mode, use_fast_refresh)
 
                 # Wait for next refresh or config change
                 refresh_interval = get_refresh_interval(display_mode)
