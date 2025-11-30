@@ -46,6 +46,12 @@ def get_mock_dashboard_data() -> dict:
 def get_mock_holiday_data(holiday_name: str = "Spring Festival") -> dict:
     """Return mock data for a specific holiday."""
     holidays = {
+        "New Year": {
+            "name": "New Year",
+            "title": "Happy New Year!",
+            "message": "2025",
+            "icon": "firework",
+        },
         "Spring Festival": {
             "name": "Spring Festival",
             "title": "Happy New Year!",
@@ -69,6 +75,18 @@ def get_mock_holiday_data(holiday_name: str = "Spring Festival") -> dict:
             "title": "Happy Birthday!",
             "message": f"To {Config.USER_NAME}",
             "icon": "birthday",
+        },
+        "Anniversary": {
+            "name": "Anniversary",
+            "title": "Happy Anniversary!",
+            "message": f"To {Config.USER_NAME}",
+            "icon": "heart",
+        },
+        "New Year's Eve": {
+            "name": "New Year's Eve",
+            "title": "Happy New Year's Eve!",
+            "message": "Countdown to 2025",
+            "icon": "firework",
         },
     }
     return holidays.get(holiday_name, holidays["Spring Festival"])

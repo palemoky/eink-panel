@@ -154,9 +154,17 @@ def generate_all_images(output_dir="mocks/images"):
     generate_mock_image("poetry", output_file=str(output_path / "debug_poetry.png"))
 
     # 5. Holidays
-    holidays = ["Spring Festival", "Mid-Autumn", "Christmas", "Birthday"]
+    holidays = [
+        "New Year",
+        "Spring Festival",
+        "Mid-Autumn",
+        "Christmas",
+        "Birthday",
+        "Anniversary",
+        "New Year's Eve",
+    ]
     for holiday in holidays:
-        safe_name = holiday.lower().replace(" ", "_")
+        safe_name = holiday.lower().replace(" ", "_").replace("'", "")
         generate_mock_image(
             "holiday",
             holiday_name=holiday,
