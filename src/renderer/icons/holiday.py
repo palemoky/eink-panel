@@ -5,6 +5,8 @@ Provides holiday-themed icon drawing functions.
 
 import math
 
+from src.config import BASE_DIR
+
 
 class HolidayIcons:
     """Handles holiday icon rendering."""
@@ -85,6 +87,78 @@ class HolidayIcons:
             )
         draw.polygon(star_points, fill=0)
 
+    def draw_image_icon(self, draw, x, y, image_path, size=80):
+        """Draw an icon from a PNG image file.
+
+        Args:
+            draw: PIL ImageDraw object
+            x: Center x coordinate
+            y: Center y coordinate
+            image_path: Path to the PNG image file
+            size: Target size for the icon
+        """
+        from pathlib import Path
+
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+
+        icon_file = Path(__file__).parent / image_path
+        if not icon_file.exists():
+            # Fallback to star if image not found
+            self.draw_star(draw, x, y, size)
+            return
+
+        # Load the image
+        icon_img = Image.open(icon_file)
+
+        # Ensure RGBA for consistent handling
+        icon_img = icon_img.convert("RGBA")
+
+        # Resize to target size while maintaining aspect ratio
+        icon_img.thumbnail((size, size), Image.Resampling.LANCZOS)
+
+        # Create a white background
+        background = Image.new("RGBA", icon_img.size, (255, 255, 255, 255))
+
+        # Paste the image on white background using alpha channel as mask
+        background = Image.alpha_composite(background, icon_img)
+
+        # Convert to grayscale
+        gray_img = background.convert("L")
+
+        # Check if background is dark (check 4 corners)
+        w, h = gray_img.size
+        corners = [
+            gray_img.getpixel((0, 0)),
+            gray_img.getpixel((w - 1, 0)),
+            gray_img.getpixel((0, h - 1)),
+            gray_img.getpixel((w - 1, h - 1)),
+        ]
+        avg_bg = sum(corners) / 4
+
+        # If background is dark (< 200), invert the image to make it dark-on-light
+        # This handles cases where the icon is light-colored on a dark background
+        if avg_bg < 200:
+            gray_img = ImageOps.invert(gray_img)
+
+        # Enhance contrast for sharper edges
+        enhancer = ImageEnhance.Contrast(gray_img)
+        icon_img = enhancer.enhance(2.0)
+
+        # Apply sharpening filter
+        icon_img = icon_img.filter(ImageFilter.SHARPEN)
+
+        # Convert to 1-bit using threshold
+        # Threshold at 128 (middle value)
+        icon_img = icon_img.point(lambda x: 0 if x < 128 else 255, "1")
+
+        # Calculate position to center the image
+        paste_x = x - icon_img.width // 2
+        paste_y = y - icon_img.height // 2
+
+        # Get the underlying image from draw object
+        base_image = draw._image
+        base_image.paste(icon_img, (paste_x, paste_y))
+
     def draw_full_screen_message(
         self, draw, width, height, title, message, icon_type=None, font_l=None, font_m=None
     ):
@@ -100,6 +174,7 @@ class HolidayIcons:
         draw.rectangle((16, 16, width - 16, height - 16), outline=0, width=2)
 
         # Draw icon if specified
+        icon_path = f"{BASE_DIR}/resources/icons/holidays/"
         if icon_type:
             icon_y = center_y - 50
             match icon_type:
@@ -108,13 +183,32 @@ class HolidayIcons:
                 case "heart":
                     self.draw_heart(draw, center_x, icon_y, size=80)
                 case "lantern":
-                    self.draw_lantern(draw, center_x, icon_y, size=80)
+                    # Use image instead of drawing for better quality
+                    self.draw_image_icon(
+                        draw, center_x, icon_y, f"{icon_path}/lantern.png", size=100
+                    )
+                case "mooncake":
+                    self.draw_image_icon(
+                        draw, center_x, icon_y, f"{icon_path}/mooncake.png", size=100
+                    )
+                case "firecracker":
+                    self.draw_image_icon(
+                        draw, center_x, icon_y, f"{icon_path}/firecracker.png", size=100
+                    )
+                case "celebration":
+                    self.draw_image_icon(
+                        draw, center_x, icon_y, f"{icon_path}/celebration.png", size=100
+                    )
                 case "tree":
                     self.draw_tree(draw, center_x, icon_y, size=80)
+                case "firework":
+                    self.draw_image_icon(
+                        draw, center_x, icon_y, f"{icon_path}/firework.png", size=100
+                    )
                 case _:
                     self.draw_star(draw, center_x, icon_y, size=80)
 
         # Draw title and message
         if font_l and font_m:
             text_renderer.draw_centered_text(draw, center_x, center_y + 30, title, font_l)
-            text_renderer.draw_centered_text(draw, center_x, center_y + 80, message, font_m)
+            text_renderer.draw_centered_text(draw, center_x, center_y + 90, message, font_m)
