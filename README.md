@@ -35,9 +35,9 @@ The easiest way to run is using Docker - it handles all dependencies and driver 
 |---------|-------------|----------|
 | ![Birthday](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/birthday.png) | ![Anniversary](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/anniversary.png) | ![Year-End Summary](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/year_end_summary.png) |
 
-| New Year | Christmas | Spring Festival | Moon Festival |
-|----------|----------|----------------|---------------|
-| ![New Year](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/new_year.png) | ![Christmas](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/christmas.png) | ![Spring Festival](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/spring_festival.png) | ![Moon Festival](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/moon_festival.png) |
+| New Year | Christmas | Spring Festival | Mid-Autumn Festival |
+|----------|----------|----------------|---------------------|
+| ![New Year](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/new_year.png) | ![Christmas](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/christmas.png) | ![Spring Festival](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/spring_festival.png) | ![Mid-Autumn Festival](https://raw.githubusercontent.com/palemoky/eink-dashboard/main/docs/screenshots/mid_autumn_festival.png) |
 
 ### Pull and Run
 
