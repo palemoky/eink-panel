@@ -104,14 +104,9 @@ def get_mock_year_end_data() -> dict:
             "total_reviews": 89,
             "total_issues": 45,
             "longest_streak": 67,
-            "current_streak": 12,
             "total_stars": 342,
             "top_languages": ["Python", "Rust", "Go"],
-            "most_productive_day": "10.15",
-            # Old fields for backward compatibility
-            "total": 2989,
-            "max": 28,
-            "avg": 8.2,
+            "most_productive_day": 55,
         },
     }
 

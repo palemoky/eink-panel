@@ -87,7 +87,7 @@ class HolidayIcons:
             )
         draw.polygon(star_points, fill=0)
 
-    def draw_image_icon(self, draw, x, y, image_path, size=80):
+    def draw_image_icon(self, draw, x, y, image_path, size=80, flip_horizontal=False):
         """Draw an icon from a PNG image file.
 
         Args:
@@ -96,6 +96,7 @@ class HolidayIcons:
             y: Center y coordinate
             image_path: Path to the PNG image file
             size: Target size for the icon
+            flip_horizontal: Whether to flip the image horizontally
         """
         from pathlib import Path
 
@@ -112,6 +113,10 @@ class HolidayIcons:
 
         # Ensure RGBA for consistent handling
         icon_img = icon_img.convert("RGBA")
+
+        # Flip horizontally if requested
+        if flip_horizontal:
+            icon_img = icon_img.transpose(Image.FLIP_LEFT_RIGHT)
 
         # Resize to target size while maintaining aspect ratio
         icon_img.thumbnail((size, size), Image.Resampling.LANCZOS)

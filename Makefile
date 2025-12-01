@@ -52,9 +52,6 @@ mock-dashboard:  ## Generate dashboard mock image
 mock-holiday:  ## Generate holiday mock image
 	python -m mocks.generate --mode holiday
 
-mock-year-end:  ## Generate year-end mock image
-	python -m mocks.generate --mode year-end
-
 mock-quote:  ## Generate quote mock image
 	python -m mocks.generate --mode quote
 
