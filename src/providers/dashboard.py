@@ -390,20 +390,6 @@ class Dashboard:
         # Calculate week progress
         data["week_progress"] = get_week_progress()
 
-        # Fetch HackerNews data
-        from .hackernews import get_hackernews
-
-        if self.client:
-            hn_data = await get_hackernews(self.client, reset_to_first=False)
-        else:
-            async with httpx.AsyncClient() as client:
-                hn_data = await get_hackernews(client, reset_to_first=False)
-
-        data["hackernews"] = hn_data
-        logger.info(
-            f"📰 Fetched HackerNews: Page {hn_data.get('page', 1)}/{hn_data.get('total_pages', 1)}"
-        )
-
         # Conditionally fetch TODO lists based on time slots
         if show_todo:
             from .todo import get_todo_lists
@@ -413,11 +399,28 @@ class Dashboard:
             data["todo_must"] = todo_must
             data["todo_optional"] = todo_optional
             logger.info("📝 Fetched Todo Lists")
+
+            # Clear HackerNews data during TODO time
+            data["hackernews"] = {}
         else:
+            # Fetch HackerNews data only during HackerNews time slots
+            from .hackernews import get_hackernews
+
+            if self.client:
+                hn_data = await get_hackernews(self.client, reset_to_first=False)
+            else:
+                async with httpx.AsyncClient() as client:
+                    hn_data = await get_hackernews(client, reset_to_first=False)
+
+            data["hackernews"] = hn_data
+            logger.info(
+                f"📰 Fetched HackerNews: Page {hn_data.get('page', 1)}/{hn_data.get('total_pages', 1)}"
+            )
+
+            # Clear TODO data during HackerNews time
             data["todo_goals"] = []
             data["todo_must"] = []
             data["todo_optional"] = []
-            logger.info("⏭️  Skipping TODO fetch (not in TODO time slot)")
 
         self.save_cache(data)
         return data
