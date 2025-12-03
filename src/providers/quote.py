@@ -3,15 +3,13 @@
 Fetches quotes from Quotable API with hourly caching and local fallback.
 """
 
-import json
 import logging
-import random
-from datetime import datetime, timedelta
 from typing import TypedDict
 
 import httpx
 
-from ..config import BASE_DIR, Config
+from ..config import Config
+from .base import BaseContentProvider
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +58,17 @@ FALLBACK_QUOTES: list[Quote] = [
 ]
 
 
-class QuoteProvider:
+class QuoteProvider(BaseContentProvider):
     """Provider for fetching and caching famous quotes."""
 
     def __init__(self):
-        self.cache_file = BASE_DIR / "data" / "quote_cache.json"
-        self.cache_file.parent.mkdir(parents=True, exist_ok=True)
+        """Initialize quote provider with caching and fallback."""
+        super().__init__(
+            cache_filename="quote_cache.json",
+            fallback_data=FALLBACK_QUOTES,
+            content_type="quote",
+            cache_hours=Config.display.quote_cache_hours,
+        )
 
     async def get_quote(self, client: httpx.AsyncClient | None = None) -> Quote:
         """Get current quote (cached or fresh).
@@ -76,55 +79,9 @@ class QuoteProvider:
         Returns:
             Quote dictionary with content, author, source, and type
         """
-        # Check cache first
-        cached_quote = self._get_cached_quote()
-        if cached_quote:
-            return cached_quote
+        return await self.get_content(client)
 
-        # Try to fetch new quote
-        try:
-            quote = await self._fetch_quote(client)
-            self._save_cache(quote)
-            return quote
-        except Exception as e:
-            logger.warning(f"Failed to fetch quote: {e}, using fallback")
-            return self._get_fallback_quote()
-
-    def _get_cached_quote(self) -> Quote | None:
-        """Get quote from cache if still valid.
-
-        Returns:
-            Cached quote if valid, None otherwise
-        """
-        if not self.cache_file.exists():
-            logger.info("No quote cache file found")
-            return None
-
-        try:
-            with open(self.cache_file) as f:
-                cache_data = json.load(f)
-
-            # Check if cache is still valid
-            cached_time = datetime.fromisoformat(cache_data["timestamp"])
-            cache_duration = timedelta(hours=Config.display.quote_cache_hours)
-            time_since_cache = datetime.now() - cached_time
-
-            logger.info(
-                f"Quote cache: age={int(time_since_cache.total_seconds() / 60)}min, "
-                f"max_age={Config.display.quote_cache_hours}h"
-            )
-
-            if time_since_cache < cache_duration:
-                logger.info("✅ Using cached quote (still valid)")
-                return cache_data["quote"]
-
-            logger.info("⏰ Cache expired, fetching new quote")
-            return None
-        except Exception as e:
-            logger.warning(f"Failed to read cache: {e}")
-            return None
-
-    async def _fetch_quote(self, client: httpx.AsyncClient | None = None) -> Quote:
+    async def _fetch_content(self, client: httpx.AsyncClient | None = None) -> Quote:
         """Fetch English quote from Quotable API.
 
         Args:
@@ -134,7 +91,7 @@ class QuoteProvider:
             Quote dictionary
 
         Raises:
-            Exception: If API request fails
+            httpx.HTTPError: If HTTP request fails
         """
         url = "http://api.quotable.io/random"
 
@@ -153,32 +110,6 @@ class QuoteProvider:
             "source": "",
             "type": "quote",
         }
-
-    def _get_fallback_quote(self) -> Quote:
-        """Get a random fallback quote from local database.
-
-        Returns:
-            Random quote from fallback list
-        """
-        return random.choice(FALLBACK_QUOTES)
-
-    def _save_cache(self, quote: Quote):
-        """Save quote to cache file.
-
-        Args:
-            quote: Quote to cache
-        """
-        try:
-            cache_data = {"timestamp": datetime.now().isoformat(), "quote": quote}
-
-            with open(self.cache_file, "w") as f:
-                json.dump(cache_data, f, ensure_ascii=False, indent=2)
-
-            logger.info(
-                f"💾 Quote cached successfully (expires in {Config.display.quote_cache_hours}h)"
-            )
-        except Exception as e:
-            logger.warning(f"Failed to save cache: {e}")
 
 
 # Singleton instance

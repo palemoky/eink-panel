@@ -37,10 +37,14 @@ class TestHackerNewsTask:
         """Test task cancellation."""
         stop_event = asyncio.Event()
 
-        # Mock wait_for to raise CancelledError immediately
-        with patch("asyncio.wait_for", side_effect=asyncio.CancelledError):
-            with pytest.raises(asyncio.CancelledError):
-                await hackernews_pagination_task(stop_event, mock_epd, mock_layout, mock_dm)
+        try:
+            # Mock wait_for to raise CancelledError immediately
+            with patch("asyncio.wait_for", side_effect=asyncio.CancelledError):
+                with pytest.raises(asyncio.CancelledError):
+                    await hackernews_pagination_task(stop_event, mock_epd, mock_layout, mock_dm)
+        finally:
+            # Clean up event to avoid RuntimeWarning
+            stop_event.set()
 
     @pytest.mark.asyncio
     async def test_task_stop_event(self, mock_epd, mock_layout, mock_dm):
