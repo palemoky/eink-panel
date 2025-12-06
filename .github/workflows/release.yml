@@ -119,6 +119,30 @@ jobs:
           chmod +x .github/scripts/cleanup-ghcr-untagged.sh
           .github/scripts/cleanup-ghcr-untagged.sh "${{ env.PACKAGE_NAME }}" "${{ env.OWNER }}"
 
+      - name: Notify Success
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          if [ -n "${{ secrets.SPEAKER_WEBHOOK_URL }}" ]; then
+            curl -X POST "${{ secrets.SPEAKER_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${{ secrets.SPEAKER_TOKEN }}" \
+            -H "CF-Access-Client-Id: ${{ secrets.CF_CLIENT_ID }}" \
+            -H "CF-Access-Client-Secret: ${{ secrets.CF_CLIENT_SECRET }}" \
+            -d '{"message": "Ship it! The code is live."}' || true
+          fi
+
+      - name: Notify Failure
+        if: failure() && github.event_name != 'pull_request'
+        run: |
+          if [ -n "${{ secrets.SPEAKER_WEBHOOK_URL }}" ]; then
+            curl -X POST "${{ secrets.SPEAKER_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${{ secrets.SPEAKER_TOKEN }}" \
+            -H "CF-Access-Client-Id: ${{ secrets.CF_CLIENT_ID }}" \
+            -H "CF-Access-Client-Secret: ${{ secrets.CF_CLIENT_SECRET }}" \
+            -d '{"message": "Mayday! Mayday! The code is broken, I repeat, the code is broken!"}' || true
+          fi
+
   sync-readme:
     runs-on: ubuntu-latest
     needs: build-and-push
