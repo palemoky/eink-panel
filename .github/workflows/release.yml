@@ -143,6 +143,57 @@ jobs:
             -d '{"message": "Mayday! Mayday! The code is broken, I repeat, the code is broken!"}' || true
           fi
 
+  create-release:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog for version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Extract changelog section for this version
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            /^## \['"$VERSION"'\]/ || /^## v'"$VERSION"'/ {found=1; next}
+            found && /^## / {exit}
+            found {print}
+          ' CHANGELOG.md)
+
+          if [ -z "$CHANGELOG" ]; then
+            echo "No changelog found for version $VERSION, using generic message"
+            printf "Release version %s\n\nSee [CHANGELOG.md](https://github.com/%s/blob/main/CHANGELOG.md) for details.\n" \
+              "${{ steps.version.outputs.version }}" \
+              "${{ github.repository }}" > /tmp/release_notes.md
+          else
+            echo "$CHANGELOG" > /tmp/release_notes.md
+          fi
+
+          # Output for debugging
+          echo "Changelog content:"
+          cat /tmp/release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          generate_release_notes: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   sync-readme:
     runs-on: ubuntu-latest
     needs: build-and-push
