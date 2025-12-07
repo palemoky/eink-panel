@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README.md and LICENSE files from Docker image (reduced size)
 - 30-second waiting period in CI workflow
 
-## [0.1.0] - 2025-12-04
+## [0.1.0] - 2025-11-30
 
 ### Added
 - Initial release of Paper Pi
