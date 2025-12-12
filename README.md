@@ -1,9 +1,9 @@
-<h1 align="center">
-    <img src="https://raw.githubusercontent.com/palemoky/paper-pi/main/docs/logo.png" alt="Logo" width="128" />
+<h3 align="center">
+    <img src="https://raw.githubusercontent.com/palemoky/paper-pi/main/docs/logo.png" alt="Logo" height="100px" />
   <br>
   Powered by Pi, rendered in Pixels.
   <br>
-</h1>
+</h3>
 
 <h1 align="center">Paper Pi</h1>
 
